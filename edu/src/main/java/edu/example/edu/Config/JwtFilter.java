@@ -35,7 +35,7 @@ public class JwtFilter extends OncePerRequestFilter {
             try {
                 email = jwtUtil.extractUsername(token);
             } catch (Exception e) {
-                logger.error("JWT token invalid or expired");
+                logger.error("JWT token Invalid or expired");
             }
         }
 
