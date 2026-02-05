@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { loginUser } from "../utils/api";
 import { Link } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 const Login = () => {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -28,13 +30,13 @@ const Login = () => {
   return (
     <div style={styles.wrapper}>
       <div style={styles.card}>
-        <h2 style={styles.title}>Welcome Back</h2>
-        <p style={styles.subtitle}>Login to your account</p>
+        <h2 style={styles.title}>{t("welcome_back")}</h2>
+        <p style={styles.subtitle}>{t("login_to_account")}</p>
 
         <form onSubmit={handleLogin} style={styles.form}>
           <input
             type="email"
-            placeholder="Email address"
+            placeholder={t("email_placeholder")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
@@ -43,7 +45,7 @@ const Login = () => {
 
           <input
             type="password"
-            placeholder="Password"
+            placeholder={t("password_placeholder")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -51,14 +53,14 @@ const Login = () => {
           />
 
           <button type="submit" style={styles.button}>
-            Login
+            {t("login")}
           </button>
         </form>
 
         <p style={styles.footerText}>
-          New user?{" "}
+          {t("new_user")}{" "}
           <Link to="/register" style={styles.link}>
-            Create an account
+            {t("create_account")}
           </Link>
         </p>
       </div>

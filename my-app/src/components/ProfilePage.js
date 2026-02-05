@@ -1,13 +1,20 @@
 import React, { useEffect, useState } from "react";
 import { getUserById } from "../utils/api";
 import { getDecodedToken } from "../utils/authHelper";
-import { FaUserCircle, FaEnvelope, FaIdBadge, FaSchool, FaDoorOpen, FaCheckCircle } from "react-icons/fa";
+import { FaUserCircle, FaEnvelope, FaIdBadge, FaSchool, FaDoorOpen, FaCheckCircle, FaGlobe } from "react-icons/fa";
+import { useTranslation } from "react-i18next";
 
 const ProfilePage = () => {
+    const { t, i18n } = useTranslation();
     const [userData, setUserData] = useState(null);
     const [loading, setLoading] = useState(true);
     const decoded = getDecodedToken();
     const userId = decoded?.userId;
+
+    const changeLanguage = (lng) => {
+        i18n.changeLanguage(lng);
+        localStorage.setItem("lang", lng);
+    };
 
     useEffect(() => {
         if (!userId) return;
@@ -37,7 +44,7 @@ const ProfilePage = () => {
             <div style={styles.loadingContainer}>
                 <div className="spinner"></div>
                 <p style={{ marginTop: "20px", color: "var(--text-secondary)", fontWeight: "500" }}>
-                    Curating your profile...
+                    {t("preparing")}
                 </p>
             </div>
         );
@@ -65,12 +72,12 @@ const ProfilePage = () => {
 
             <div style={styles.detailsGrid}>
                 <div className="premium-card" style={styles.infoCard}>
-                    <h3 style={styles.cardTitle}>Personal Information</h3>
+                    <h3 style={styles.cardTitle}>{t("personal_info")}</h3>
                     <div style={styles.infoList}>
                         <div style={styles.infoItem}>
                             <FaEnvelope style={styles.icon} />
                             <div>
-                                <label style={styles.label}>Email Address</label>
+                                <label style={styles.label}>{t("email_placeholder")}</label>
                                 <p style={styles.value}>{userData?.email}</p>
                             </div>
                         </div>
@@ -85,7 +92,7 @@ const ProfilePage = () => {
                 </div>
 
                 <div className="premium-card" style={styles.infoCard}>
-                    <h3 style={styles.cardTitle}>Academic Affiliation</h3>
+                    <h3 style={styles.cardTitle}>{t("academic_affiliation")}</h3>
                     <div style={styles.infoList}>
                         <div style={styles.infoItem}>
                             <FaSchool style={styles.icon} />
@@ -108,11 +115,32 @@ const ProfilePage = () => {
             </div>
 
             <div className="premium-card" style={styles.actionCard}>
-                <h3 style={styles.cardTitle}>Account Settings</h3>
+                <h3 style={styles.cardTitle}>{t("account_settings")}</h3>
+
+                <div style={{ marginBottom: "32px" }}>
+                    <label style={styles.label}><FaGlobe style={{ marginRight: "8px" }} /> {t("language")}</label>
+                    <div style={styles.langSwitch}>
+                        <button
+                            className={`modern-btn ${i18n.language === 'en' ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => changeLanguage('en')}
+                            style={{ flex: 1 }}
+                        >
+                            {t("english")}
+                        </button>
+                        <button
+                            className={`modern-btn ${i18n.language === 'ta' ? 'btn-primary' : 'btn-outline'}`}
+                            onClick={() => changeLanguage('ta')}
+                            style={{ flex: 1 }}
+                        >
+                            {t("tamil")}
+                        </button>
+                    </div>
+                </div>
+
                 <p style={styles.textMuted}>Currently, profile editing is handled by your school administrator.</p>
                 <div style={styles.buttonGroup}>
-                    <button className="modern-btn btn-outline">Change Password</button>
-                    <button className="modern-btn btn-outline">Request Info Update</button>
+                    <button className="modern-btn btn-outline">{t("change_password")}</button>
+                    <button className="modern-btn btn-outline">{t("request_update")}</button>
                 </div>
             </div>
         </div>
@@ -241,6 +269,11 @@ const styles = {
         alignItems: "center",
         justifyContent: "center",
         minHeight: "60vh",
+    },
+    langSwitch: {
+        display: "flex",
+        gap: "12px",
+        marginTop: "12px",
     }
 };
 

@@ -2,8 +2,10 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getUserRole, getUserName, logout } from "../utils/authHelper";
 import { FaSignOutAlt, FaRocket, FaUserCircle } from "react-icons/fa";
+import { useTranslation } from "react-i18next";
 
 const HomePage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const role = getUserRole();
   const name = getUserName();
@@ -44,21 +46,21 @@ const HomePage = () => {
         <div style={styles.iconWrapper}>
           <FaRocket size={32} className="pulse" />
         </div>
-        <h2 style={styles.welcomeText}>Welcome back, {name || "User"}!</h2>
+        <h2 style={styles.welcomeText}>{t("welcome")}, {name || "User"}!</h2>
         <div style={styles.statusBox}>
           <div style={styles.spinner}></div>
           <p style={styles.redirectText}>
-            {redirecting ? "Redirecting to your dashboard..." : "Preparing your classroom experience..."}
+            {redirecting ? t("redirecting") : t("preparing")}
           </p>
         </div>
 
         <div style={styles.footer}>
           <div style={styles.userInfo}>
             <FaUserCircle size={14} />
-            <span>Signed in as <strong>{role}</strong></span>
+            <span>{t("signed_in_as")} <strong>{role}</strong></span>
           </div>
           <button onClick={logout} className="modern-btn btn-outline" style={styles.logoutBtn}>
-            <FaSignOutAlt /> Logout
+            <FaSignOutAlt /> {t("logout")}
           </button>
         </div>
       </div>

@@ -1,10 +1,12 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { getDecodedToken } from "../utils/authHelper";
+import { useTranslation } from "react-i18next";
 
 const Navbar = () => {
+  const { t } = useTranslation();
   const decoded = getDecodedToken();
-  const userName = decoded?.name || "User";
+  const userName = decoded?.name || t("profile");
 
   const getInitials = (name) => {
     return name.split(" ").map(n => n[0]).join("").toUpperCase();

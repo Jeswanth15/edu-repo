@@ -2,8 +2,10 @@ import React, { useState } from "react";
 import { FaBars, FaSignOutAlt, FaUser } from "react-icons/fa";
 import { Link, useLocation } from "react-router-dom";
 import { getDecodedToken, logout } from "../utils/authHelper";
+import { useTranslation } from "react-i18next";
 
 const Sidebar = () => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
   const decoded = getDecodedToken();
   const location = useLocation();
@@ -84,57 +86,58 @@ const Sidebar = () => {
         }}
       >
         <div style={{ padding: "0 25px 30px 25px" }}>
-          <h2 style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "2px", opacity: 0.5, marginBottom: "8px" }}>Organization</h2>
+          <h2 style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "2px", opacity: 0.5, marginBottom: "8px" }}>{t("organization")}</h2>
           <h3 style={{ color: "white", fontSize: "18px", margin: 0 }}>{schoolName}</h3>
         </div>
 
         <div style={{ flex: 1, padding: "0 15px" }}>
-          <h2 style={styles.sectionTitle}>Main Menu</h2>
-          <Link to="/" style={linkStyle("/")} onClick={closeSidebar}>Dashboard</Link>
-          <Link to="/profile" style={linkStyle("/profile")} onClick={closeSidebar}><FaUser style={{ marginRight: 10 }} /> Profile</Link>
+          <h2 style={styles.sectionTitle}>{t("main_menu")}</h2>
+          <Link to="/" style={linkStyle("/")} onClick={closeSidebar}>{t("dashboard")}</Link>
+          <Link to="/profile" style={linkStyle("/profile")} onClick={closeSidebar}><FaUser style={{ marginRight: 10 }} /> {t("profile")}</Link>
 
           {/* SCHOOL ADMIN */}
           {userRole === "SCHOOLADMIN" && (
             <>
-              <h2 style={styles.sectionTitle}>Management</h2>
-              <Link to="/schooladmin/pending-users" style={linkStyle("/schooladmin/pending-users")} onClick={closeSidebar}>User Approvals</Link>
-              <Link to="/schooladmin/classrooms" style={linkStyle("/schooladmin/classrooms")} onClick={closeSidebar}>Classrooms</Link>
-              <Link to="/schooladmin/subjects" style={linkStyle("/schooladmin/subjects")} onClick={closeSidebar}>Subjects Catalog</Link>
-              <Link to="/schooladmin/assign-subject" style={linkStyle("/schooladmin/assign-subject")} onClick={closeSidebar}>Teaching Assignments</Link>
-              <Link to="/schooladmin/enrollments" style={linkStyle("/schooladmin/enrollments")} onClick={closeSidebar}>Student Enrollments</Link>
+              <h2 style={styles.sectionTitle}>{t("management")}</h2>
+              <Link to="/schooladmin/pending-users" style={linkStyle("/schooladmin/pending-users")} onClick={closeSidebar}>{t("user_approvals")}</Link>
+              <Link to="/schooladmin/classrooms" style={linkStyle("/schooladmin/classrooms")} onClick={closeSidebar}>{t("classrooms")}</Link>
+              <Link to="/schooladmin/subjects" style={linkStyle("/schooladmin/subjects")} onClick={closeSidebar}>{t("subjects_catalog")}</Link>
+              <Link to="/schooladmin/assign-subject" style={linkStyle("/schooladmin/assign-subject")} onClick={closeSidebar}>{t("teaching_assignments")}</Link>
+              <Link to="/schooladmin/enrollments" style={linkStyle("/schooladmin/enrollments")} onClick={closeSidebar}>{t("student_enrollments")}</Link>
 
-              <h2 style={styles.sectionTitle}>Academics</h2>
-              <Link to="/schooladmin/timetables" style={linkStyle("/schooladmin/timetables")} onClick={closeSidebar}>Master Timetable</Link>
-              <Link to="/schooladmin/calendar" style={linkStyle("/schooladmin/calendar")} onClick={closeSidebar}>School Calendar</Link>
-              <Link to="/schooladmin/syllabus" style={linkStyle("/schooladmin/syllabus")} onClick={closeSidebar}>Syllabus Hub</Link>
-              <Link to="/schooladmin/exams" style={linkStyle("/schooladmin/exams")} onClick={closeSidebar}>Exam Schedules</Link>
-              <Link to="/schooladmin/marks" style={linkStyle("/schooladmin/marks")} onClick={closeSidebar}>Marks Register</Link>
+              <h2 style={styles.sectionTitle}>{t("academics")}</h2>
+              <Link to="/schooladmin/timetables" style={linkStyle("/schooladmin/timetables")} onClick={closeSidebar}>{t("master_timetable")}</Link>
+              <Link to="/schooladmin/calendar" style={linkStyle("/schooladmin/calendar")} onClick={closeSidebar}>{t("school_calendar")}</Link>
+              <Link to="/schooladmin/syllabus" style={linkStyle("/schooladmin/syllabus")} onClick={closeSidebar}>{t("syllabus_hub")}</Link>
+              <Link to="/schooladmin/exams" style={linkStyle("/schooladmin/exams")} onClick={closeSidebar}>{t("exam_schedules")}</Link>
+              <Link to="/schooladmin/marks" style={linkStyle("/schooladmin/marks")} onClick={closeSidebar}>{t("marks_register")}</Link>
+              <Link to="/schooladmin/attendance" style={linkStyle("/schooladmin/attendance")} onClick={closeSidebar}>{t("attendance")}</Link>
             </>
           )}
 
           {/* TEACHER */}
           {userRole === "TEACHER" && (
             <>
-              <h2 style={styles.sectionTitle}>Teaching</h2>
-              <Link to="/teacher/attendance" style={linkStyle("/teacher/attendance")} onClick={closeSidebar}>Attendance</Link>
-              <Link to="/teacher/assignments" style={linkStyle("/teacher/assignments")} onClick={closeSidebar}>Assignments</Link>
-              <Link to="/teacher/syllabus" style={linkStyle("/teacher/syllabus")} onClick={closeSidebar}>Syllabus</Link>
-              <Link to="/teacher/teaching-logs" style={linkStyle("/teacher/teaching-logs")} onClick={closeSidebar}>Teaching Logs</Link>
-              <Link to="/teacher/exams" style={linkStyle("/teacher/exams")} onClick={closeSidebar}>Exams</Link>
-              <Link to="/teacher/marks" style={linkStyle("/teacher/marks")} onClick={closeSidebar}>Marks Entry</Link>
+              <h2 style={styles.sectionTitle}>{t("teaching")}</h2>
+              <Link to="/teacher/attendance" style={linkStyle("/teacher/attendance")} onClick={closeSidebar}>{t("attendance")}</Link>
+              <Link to="/teacher/assignments" style={linkStyle("/teacher/assignments")} onClick={closeSidebar}>{t("assignments")}</Link>
+              <Link to="/teacher/syllabus" style={linkStyle("/teacher/syllabus")} onClick={closeSidebar}>{t("syllabus")}</Link>
+              <Link to="/teacher/teaching-logs" style={linkStyle("/teacher/teaching-logs")} onClick={closeSidebar}>{t("teaching_logs")}</Link>
+              <Link to="/teacher/exams" style={linkStyle("/teacher/exams")} onClick={closeSidebar}>{t("exams")}</Link>
+              <Link to="/teacher/marks" style={linkStyle("/teacher/marks")} onClick={closeSidebar}>{t("marks_entry")}</Link>
             </>
           )}
 
           {/* STUDENT */}
           {userRole === "STUDENT" && (
             <>
-              <h2 style={styles.sectionTitle}>My Learning</h2>
-              <Link to="/student/timetable" style={linkStyle("/student/timetable")} onClick={closeSidebar}>My Timetable</Link>
-              <Link to="/student/exams" style={linkStyle("/student/exams")} onClick={closeSidebar}>My Exams</Link>
-              <Link to="/student/marks" style={linkStyle("/student/marks")} onClick={closeSidebar}>My Marks</Link>
-              <Link to="/student/assignments" style={linkStyle("/student/assignments")} onClick={closeSidebar}>My Assignments</Link>
-              <Link to="/student/attendance" style={linkStyle("/student/attendance")} onClick={closeSidebar}>My Attendance</Link>
-              <Link to="/student/syllabus" style={linkStyle("/student/syllabus")} onClick={closeSidebar}>View Syllabus</Link>
+              <h2 style={styles.sectionTitle}>{t("my_learning")}</h2>
+              <Link to="/student/timetable" style={linkStyle("/student/timetable")} onClick={closeSidebar}>{t("my_timetable")}</Link>
+              <Link to="/student/exams" style={linkStyle("/student/exams")} onClick={closeSidebar}>{t("my_exams")}</Link>
+              <Link to="/student/marks" style={linkStyle("/student/marks")} onClick={closeSidebar}>{t("my_marks")}</Link>
+              <Link to="/student/assignments" style={linkStyle("/student/assignments")} onClick={closeSidebar}>{t("my_assignments")}</Link>
+              <Link to="/student/attendance" style={linkStyle("/student/attendance")} onClick={closeSidebar}>{t("my_attendance")}</Link>
+              <Link to="/student/syllabus" style={linkStyle("/student/syllabus")} onClick={closeSidebar}>{t("view_syllabus")}</Link>
             </>
           )}
         </div>
@@ -144,7 +147,7 @@ const Sidebar = () => {
             onClick={logout}
             style={styles.logoutBtn}
           >
-            <FaSignOutAlt style={{ marginRight: 10 }} /> Sign Out
+            <FaSignOutAlt style={{ marginRight: 10 }} /> {t("sign_out")}
           </button>
         </div>
       </div>
