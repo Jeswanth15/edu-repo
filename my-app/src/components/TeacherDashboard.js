@@ -1,7 +1,6 @@
+// src/components/TeacherDashboard.js
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "./Sidebar";
-import Navbar from "./Navbar";
 import { getDecodedToken } from "../utils/authHelper";
 import {
   getAnnouncementsBySchool,
@@ -10,6 +9,7 @@ import {
   getAllTimetables,
   getCalendarBySchool,
 } from "../utils/api";
+import { FaBullhorn, FaPlus, FaTable, FaCalendarAlt, FaClock, FaBook, FaBuilding } from "react-icons/fa";
 
 const TeacherDashboard = () => {
   const decoded = getDecodedToken();
@@ -33,22 +33,18 @@ const TeacherDashboard = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [loading, setLoading] = useState(true);
 
-  // UI states
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Right Panel States
   const [rightPanelOpen, setRightPanelOpen] = useState(false);
-  const [rightPanelContent, setRightPanelContent] = useState(null); // 'TIMETABLE' | 'CALENDAR' | null
-  const [calLoading, setCalLoading] = useState(false);
+  const [rightPanelContent, setRightPanelContent] = useState(null);
 
   // Constants
   const DAY_KEYS = ["MON", "TUE", "WED", "THU", "FRI", "SAT"];
-  const MAX_PERIODS = 7; // fixed per your request
+  const MAX_PERIODS = 7;
 
-  // Load data
   useEffect(() => {
     const loadEverything = async () => {
       try {
         setLoading(true);
-
         const ann = await getAnnouncementsBySchool(schoolId);
         setAnnouncements(ann.data || []);
 
@@ -60,14 +56,13 @@ const TeacherDashboard = () => {
       } catch (err) {
         console.error("Dashboard load error", err);
       } finally {
-        setLoading(false);
+        setTimeout(() => setLoading(false), 600);
       }
     };
 
     if (teacherId && schoolId) loadEverything();
   }, [teacherId, schoolId]);
 
-  // Announcement creation
   const handleCreateAnnouncement = async () => {
     if (!newAnnouncement.title || !newAnnouncement.message) {
       alert("Title and message are required!");
@@ -90,16 +85,12 @@ const TeacherDashboard = () => {
     }
   };
 
-  // Calendar load & helpers
   const loadCalendar = async () => {
     try {
-      setCalLoading(true);
       const res = await getCalendarBySchool(schoolId);
       setCalendar(res.data || []);
     } catch (err) {
       console.error(err);
-    } finally {
-      setCalLoading(false);
     }
   };
 
@@ -114,15 +105,14 @@ const TeacherDashboard = () => {
 
   const getCalendarDays = () => {
     const days = [];
-    const firstDayIndex = startOfMonth.getDay(); // 0 Sun - 6 Sat
+    const firstDayIndex = startOfMonth.getDay();
     for (let i = 0; i < firstDayIndex; i++) days.push(null);
     for (let i = 1; i <= endOfMonth.getDate(); i++) {
-      days.push(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i));
+      const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i);
+      days.push(d);
     }
     return days;
   };
-
-  const days = getCalendarDays();
 
   const getDayStatus = (date) => {
     if (!date) return null;
@@ -133,333 +123,686 @@ const TeacherDashboard = () => {
 
   const getColor = (status) => {
     switch (status) {
-      case "HOLIDAY":
-        return "#ffcccc";
-      case "HALF_DAY":
-        return "#fff4b3";
-      case "SUNDAY":
-        return "#d9d9d9";
-      case "WORKING":
-        return "#cce5ff";
-      default:
-        return "#ffffff";
+      case "HOLIDAY": return "rgba(239, 68, 68, 0.1)";
+      case "HALF_DAY": return "rgba(245, 158, 11, 0.1)";
+      case "SUNDAY": return "rgba(107, 114, 128, 0.1)";
+      case "WORKING": return "rgba(16, 185, 129, 0.1)";
+      default: return "transparent";
     }
   };
 
-  // Panel controls
+  const getStatusBorder = (status) => {
+    switch (status) {
+      case "HOLIDAY": return "#ef4444";
+      case "HALF_DAY": return "#f59e0b";
+      case "SUNDAY": return "#6b7280";
+      case "WORKING": return "#10b981";
+      default: return "var(--border-color)";
+    }
+  };
+
   const openRightPanel = (content) => {
     setRightPanelContent(content);
     if (content === "CALENDAR") loadCalendar();
     setRightPanelOpen(true);
   };
 
-  const closeRightPanel = () => {
-    setRightPanelOpen(false);
-  };
+  const closeRightPanel = () => setRightPanelOpen(false);
 
-  // Sidebar controls
-  const toggleSidebar = () => setSidebarOpen((s) => !s);
-  const closeSidebar = () => setSidebarOpen(false);
-
-  // Timetable map creation (normalize days to 3-letter uppercase)
   const timetableMap = {};
   myTimetable.forEach((t) => {
     let day = t.dayOfWeek ? String(t.dayOfWeek).toUpperCase() : "";
-    if (day.length > 3) {
-      if (day.startsWith("MON")) day = "MON";
-      else if (day.startsWith("TUE")) day = "TUE";
-      else if (day.startsWith("WED")) day = "WED";
-      else if (day.startsWith("THU")) day = "THU";
-      else if (day.startsWith("FRI")) day = "FRI";
-      else if (day.startsWith("SAT")) day = "SAT";
-      else if (day.startsWith("SUN")) day = "SUN";
-    }
-    const p = Number(t.periodNumber) || 0;
-    const key = `${day}_${p}`;
+    if (day.startsWith("MON")) day = "MON";
+    else if (day.startsWith("TUE")) day = "TUE";
+    else if (day.startsWith("WED")) day = "WED";
+    else if (day.startsWith("THU")) day = "THU";
+    else if (day.startsWith("FRI")) day = "FRI";
+    else if (day.startsWith("SAT")) day = "SAT";
+
+    const key = `${day}_${Number(t.periodNumber)}`;
     timetableMap[key] = t;
   });
 
-  // Render cell: SUBJECT only (user chose A)
-  const renderCellSubjectOnly = (day, period) => {
-    const key = `${day}_${period}`;
-    const entry = timetableMap[key];
-    if (!entry) return <div style={{ color: "#777" }}>-</div>;
-
-    // try subject name sources: entry.subjectName, entry.subject, find in myClasses
-    let subjectName = entry.subjectName || entry.subject || null;
-    if (!subjectName) {
-      const cls = myClasses.find((c) =>
-        (c.subjectId && c.subjectId === entry.subjectId) ||
-        (c.classroomId && c.classroomId === entry.classroomId)
-      );
-      subjectName = cls?.subjectName || null;
+  const getSubjectName = (entry) => {
+    if (!entry) return "-";
+    let sn = entry.subjectName || entry.subject || null;
+    if (!sn) {
+      const cls = myClasses.find(c => c.subjectId === entry.subjectId);
+      sn = cls?.subjectName || `Subject ${entry.subjectId}`;
     }
-    if (!subjectName) subjectName = `Subject ${entry.subjectId || ""}`;
-
-    return (
-      <div style={{ textAlign: "center", fontWeight: 700 }}>
-        {subjectName}
-      </div>
-    );
+    return sn;
   };
 
-  if (loading) return <h2 style={{ padding: 30 }}>Loading...</h2>;
+  if (loading) {
+    return (
+      <div style={styles.loaderContainer}>
+        <div className="spinner"></div>
+        <p style={{ marginTop: "20px", color: "var(--text-secondary)", fontWeight: "500" }}>
+          Curating your academic workspace...
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ minHeight: "100vh", position: "relative", background: "#f5f7fb" }}>
-      {/* Internal CSS */}
-      <style>{`
-        /* Layout */
-        .topbar { max-width: 1200px; margin: 0 auto; padding: 14px 20px; display:flex; justify-content:space-between; align-items:center; }
-        .content { max-width: 1200px; margin: 0 auto; padding: 0 20px 40px 20px; width:100%; }
-        .card { background:white; padding:18px; border-radius:10px; box-shadow: 0 6px 18px rgba(18,25,40,0.06); margin-top:18px; }
-        .input, select, textarea { width:100%; padding:10px 12px; margin-top:10px; border-radius:8px; border:1px solid #e0e6ef; font-size:14px; resize:vertical; }
-        .btn { display:inline-block; padding:10px 14px; border-radius:8px; border:none; cursor:pointer; font-weight:600; margin-top:12px; }
-        .btn-primary { background:#1e88e5; color:white; }
-        .btn-green { background:#2ecc71; color:white; }
-        .btn-red { background:#d9534f; color:white; }
-        table { width:100%; border-collapse:collapse; margin-top:10px; }
-        th, td { padding:10px 8px; border-bottom:1px solid #f0f3f8; text-align:left; }
-        /* Sidebar overlay */
-        .sidebar-overlay { position:fixed; inset:0; z-index:1200; display:flex; pointer-events:none; }
-        .sidebar-backdrop { position:absolute; inset:0; background: rgba(6,10,20,0.45); backdrop-filter: blur(2px); pointer-events:auto; }
-        .sidebar-panel { width:280px; max-width:85%; background:white; transform:translateX(-100%); transition:transform 240ms ease; box-shadow:0 10px 30px rgba(8,12,30,0.12); pointer-events:auto; z-index:1210; }
-        .sidebar-panel.open { transform:translateX(0); }
-        /* Right panel overlay */
-        .right-panel { position:fixed; top:0; right:0; height:100vh; width:420px; max-width:95%; background:white; box-shadow:-8px 0 30px rgba(8,12,30,0.12); transform:translateX(100%); transition:transform 260ms ease; z-index:1205; overflow-y:auto; }
-        .right-panel.open { transform:translateX(0); }
-        @media (max-width: 880px) { .right-panel { width:100%; } }
-        .right-panel .panel-header { display:flex; justify-content:space-between; align-items:center; padding:14px 16px; border-bottom:1px solid #f0f3f8; position:sticky; top:0; background:white; z-index:2; }
-        .calendar-grid { display:grid; grid-template-columns: repeat(7, 1fr); gap:8px; margin-top:12px; }
-        .calendar-cell { min-height:72px; padding:8px; border-radius:8px; text-align:center; }
-        .muted { color:#6b7280; font-size:13px; }
-        .hamburger { width:44px; height:44px; border-radius:8px; display:flex; align-items:center; justify-content:center; cursor:pointer; background:white; box-shadow: 0 6px 18px rgba(18,25,40,0.04); }
-        /* Timetable table styles inside panel */
-        .tt-table { width:100%; border-collapse:collapse; margin-top:8px; min-width:720px; }
-        .tt-table th { padding:10px; border-bottom:2px solid #eee; text-align:center; background:#fafafa; font-weight:700; }
-        .tt-table td { padding:12px; border-bottom:1px solid #f2f4f8; text-align:center; vertical-align:top; min-height:56px; }
-        .period-col { text-align:left; font-weight:700; width:86px; padding-left:14px; }
-      `}</style>
-
-      {/* Header / topbar */}
-      <div className="topbar" style={{ paddingTop: 18 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div className="hamburger" onClick={toggleSidebar} aria-label="Open sidebar">
-            <svg width="20" height="14" viewBox="0 0 20 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <rect width="20" height="2" rx="1" fill="#111827" />
-              <rect y="6" width="20" height="2" rx="1" fill="#111827" />
-              <rect y="12" width="20" height="2" rx="1" fill="#111827" />
-            </svg>
-          </div>
-
-          <div>
-            <h2 style={{ margin: 0 }}>Teacher Dashboard</h2>
-            <div className="muted" style={{ marginTop: 4 }}>{schoolName ? `School: ${schoolName}` : "No school selected"}</div>
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <div>
+          <h1 style={styles.title}>Teacher Workspace</h1>
+          <div style={styles.schoolTag}>
+            <FaBuilding style={{ marginRight: "8px" }} />
+            {schoolName}
           </div>
         </div>
-
-        <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-          <button className="btn btn-red" onClick={() => { localStorage.removeItem("token"); alert("Logged out successfully"); navigate("/login"); }}>Logout</button>
+        <div style={styles.headerActions}>
+          <button className="modern-btn btn-outline" onClick={() => openRightPanel("TIMETABLE")}>
+            <FaTable /> Timetable
+          </button>
+          <button className="modern-btn btn-primary" onClick={() => openRightPanel("CALENDAR")}>
+            <FaCalendarAlt /> Calendar
+          </button>
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="content">
-        {/* Announcement card */}
-        <div className="card">
-          <h3 style={{ margin: 0, marginBottom: 8 }}>📢 Create Announcement</h3>
-
-          <input
-            className="input"
-            type="text"
-            placeholder="Title"
-            value={newAnnouncement.title}
-            onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
-          />
-
-          <textarea
-            className="input"
-            placeholder="Message"
-            rows={4}
-            value={newAnnouncement.message}
-            onChange={(e) => setNewAnnouncement({ ...newAnnouncement, message: e.target.value })}
-          />
-
-          <select
-            className="input"
-            value={newAnnouncement.classroomId}
-            onChange={(e) => setNewAnnouncement({ ...newAnnouncement, classroomId: e.target.value })}
-          >
-            <option value="">School-wide</option>
-            {myClasses.map((cls) => (
-              <option key={cls.id} value={cls.classroomId}>
-                {cls.classroomName} - {cls.classroomSection} ({cls.subjectName})
-              </option>
-            ))}
-          </select>
-
-          <div style={{ display: "flex", gap: 10 }}>
-            <button onClick={handleCreateAnnouncement} className="btn btn-primary">Post Announcement</button>
-
-            <button onClick={() => openRightPanel("TIMETABLE")} className="btn btn-green">View My Timetable</button>
-
-            <button onClick={() => openRightPanel("CALENDAR")} className="btn btn-primary">View School Calendar</button>
-          </div>
-        </div>
-
-        {/* Latest announcements */}
-        <div style={{ marginTop: 22 }}>
-          <h3 style={{ marginBottom: 8 }}>📢 Latest Announcements</h3>
-          {announcements.length === 0 ? (
-            <div className="card"><p className="muted">No announcements posted yet.</p></div>
-          ) : (
-            announcements.map((a) => (
-              <div className="card" key={a.announcementId}>
-                <h4 style={{ marginTop: 0 }}>{a.title}</h4>
-                <p style={{ marginBottom: 8 }}>{a.message}</p>
-                <div className="muted">{new Date(a.postedAt).toLocaleString()}</div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Classes */}
-        <div className="card" style={{ background: "#fffaf0" }}>
-          <h3 style={{ marginTop: 0 }}>My Classes & Subjects</h3>
-          {myClasses.length === 0 ? (
-            <p className="muted">You are not assigned to any class.</p>
-          ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Class</th>
-                  <th>Section</th>
-                  <th>Subject</th>
-                </tr>
-              </thead>
-              <tbody>
-                {myClasses.map((cs) => (
-                  <tr key={cs.id} style={{ cursor: "pointer" }} onClick={() => navigate(`/teacher/attendance/${cs.classroomId}/${cs.subjectId}`)}>
-                    <td>{cs.classroomName}</td>
-                    <td>{cs.classroomSection}</td>
-                    <td>{cs.subjectName}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-
-      {/* Sidebar overlay */}
-      {sidebarOpen && (
-        <div className="sidebar-overlay" role="dialog" aria-modal="true">
-          <div className="sidebar-backdrop" onClick={closeSidebar} />
-          <div className="sidebar-panel open" style={{ padding: 0 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 14px", borderBottom: "1px solid #f0f3f8" }}>
-              <strong style={{ fontSize: 16 }}>Menu</strong>
-              <button onClick={closeSidebar} aria-label="Close sidebar" style={{ border: "none", background: "transparent", cursor: "pointer", fontSize: 18, padding: 6 }}>✕</button>
-            </div>
-            <div style={{ overflowY: "auto", height: "calc(100vh - 56px)" }}>
-              <Sidebar />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Right panel overlay */}
-      <div className={`right-panel ${rightPanelOpen ? "open" : ""}`} aria-hidden={!rightPanelOpen}>
-        <div className="panel-header">
-          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
-            <h3 style={{ margin: 0 }}>{rightPanelContent === "TIMETABLE" ? "My Timetable" : "School Calendar"}</h3>
-            <div className="muted" style={{ fontSize: 13 }}>
-              {rightPanelContent === "TIMETABLE" ? `${myTimetable.length} items` : ""}
-            </div>
-          </div>
-
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <button onClick={() => { if (rightPanelContent === "CALENDAR") changeMonth(-1); else setRightPanelContent("TIMETABLE"); }} className="btn" style={{ background: "#f3f4f6", color: "#111827" }} aria-label="Previous">◀</button>
-
-            <button onClick={() => { if (rightPanelContent === "CALENDAR") changeMonth(1); else setRightPanelContent("CALENDAR"); }} className="btn" style={{ background: "#f3f4f6", color: "#111827" }} aria-label="Next">▶</button>
-
-            <button onClick={closeRightPanel} className="btn" style={{ background: "#fff", fontSize: 18 }}>✕</button>
-          </div>
-        </div>
-
-        <div style={{ padding: 16 }}>
-          {/* TIMETABLE in right panel */}
-          {rightPanelContent === "TIMETABLE" && (
-            <>
-              <div style={{ marginBottom: 10 }}>
-                <strong className="muted">School-style grid (P1–P7 × MON–SAT)</strong>
-              </div>
-
-              <div style={{ overflowX: "auto" }}>
-                <table className="tt-table" role="table" aria-label="Timetable">
-                  <thead>
-                    <tr>
-                      <th className="period-col">PERIOD</th>
-                      {DAY_KEYS.map((d) => (
-                        <th key={d}>{d}</th>
-                      ))}
-                    </tr>
-                  </thead>
-
-                  <tbody>
-                    {Array.from({ length: MAX_PERIODS }, (_, i) => i + 1).map((p) => (
-                      <tr key={p}>
-                        <td className="period-col">P{p}</td>
-                        {DAY_KEYS.map((d) => (
-                          <td key={`${d}_${p}`}>
-                            {renderCellSubjectOnly(d, p)}
-                          </td>
-                        ))}
-                      </tr>
+      <div style={styles.grid}>
+        <div style={styles.main}>
+          <div className="premium-card" style={styles.formCard}>
+            <h3 style={styles.cardSectionTitle}><FaPlus size={14} /> New Announcement</h3>
+            <div style={styles.form}>
+              <input
+                className="modern-input"
+                placeholder="Subject or Title"
+                value={newAnnouncement.title}
+                onChange={(e) => setNewAnnouncement({ ...newAnnouncement, title: e.target.value })}
+              />
+              <textarea
+                className="modern-input"
+                placeholder="Share an update with your students..."
+                rows={3}
+                style={{ resize: "none" }}
+                value={newAnnouncement.message}
+                onChange={(e) => setNewAnnouncement({ ...newAnnouncement, message: e.target.value })}
+              />
+              <div style={styles.formFooter}>
+                <div style={{ flex: 1, position: "relative" }}>
+                  <select
+                    className="modern-input"
+                    style={{ width: "100%", margin: 0, paddingRight: "30px" }}
+                    value={newAnnouncement.classroomId}
+                    onChange={(e) => setNewAnnouncement({ ...newAnnouncement, classroomId: e.target.value })}
+                  >
+                    <option value="">Broadcast to School</option>
+                    {myClasses.map((cls) => (
+                      <option key={cls.id} value={cls.classroomId}>
+                        {cls.classroomName} - {cls.subjectName}
+                      </option>
                     ))}
-                  </tbody>
-                </table>
+                  </select>
+                </div>
+                <button className="modern-btn btn-primary" onClick={handleCreateAnnouncement}>
+                  <FaBullhorn /> Post
+                </button>
               </div>
-            </>
-          )}
+            </div>
+          </div>
 
-          {/* CALENDAR in right panel */}
-          {rightPanelContent === "CALENDAR" && (
-            <>
-              <div style={{ display: "flex", justifyContent: "center", gap: 12, alignItems: "center", marginBottom: 10 }}>
-                <button className="btn" onClick={() => changeMonth(-1)} style={{ background: "#f3f4f6" }}>◀</button>
-                <div style={{ fontWeight: 700 }}>{currentMonth.toLocaleString("default", { month: "long", year: "numeric" })}</div>
-                <button className="btn" onClick={() => changeMonth(1)} style={{ background: "#f3f4f6" }}>▶</button>
+          <div style={styles.feed}>
+            <div style={styles.feedHeader}>
+              <h3 style={styles.feedTitle}><FaBullhorn /> Recent Activity</h3>
+              <span style={styles.feedCount}>{announcements.length} Posts</span>
+            </div>
+            {announcements.length === 0 ? (
+              <div className="premium-card" style={styles.emptyFeed}>
+                <FaBullhorn size={40} style={{ opacity: 0.1, marginBottom: "16px" }} />
+                <p>No announcements yet. Start the conversation!</p>
               </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 6, marginBottom: 6 }}>
-                {["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"].map((d) => (
-                  <div key={d} style={{ textAlign: "center", fontWeight: 700 }}>{d}</div>
-                ))}
-              </div>
-
-              <div className="calendar-grid">
-                {days.map((date, idx) => {
-                  const status = getDayStatus(date);
-                  return (
-                    <div key={idx} className="calendar-cell" style={{ background: getColor(status), boxShadow: "inset 0 -1px 0 rgba(0,0,0,0.02)" }}>
-                      <div style={{ fontWeight: 700 }}>{date ? date.getDate() : ""}</div>
-                      {status && (
-                        <div style={{ fontSize: 12, marginTop: 6, fontWeight: 700 }}>{status}</div>
-                      )}
+            ) : (
+              announcements.map((a) => (
+                <div className="premium-card" key={a.announcementId} style={styles.feedCard}>
+                  <div style={styles.feedCardHeader}>
+                    <h4 style={styles.feedCardTitle}>{a.title}</h4>
+                    {a.classroomId ? (
+                      <span style={styles.classBadge}>
+                        {myClasses.find(c => c.classroomId === a.classroomId)?.classroomName || "Class"}
+                      </span>
+                    ) : (
+                      <span style={styles.schoolBadge}>School Wide</span>
+                    )}
+                  </div>
+                  <p style={styles.feedCardMsg}>{a.message}</p>
+                  <div style={styles.feedCardFooter}>
+                    <div style={styles.footerInfo}>
+                      <FaClock size={12} />
+                      {new Date(a.postedAt).toLocaleDateString()} at {new Date(a.postedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
 
-          {!rightPanelContent && (
-            <div className="muted">Open Timetable or Calendar using the buttons on the main page.</div>
-          )}
+        <div style={styles.side}>
+          <div className="premium-card" style={styles.classesCard}>
+            <h3 style={styles.cardSectionTitle}><FaBook size={14} /> Academic Load</h3>
+            <p style={styles.sideSubtitle}>Active Subjects & Classes</p>
+            <div style={styles.classList}>
+              {myClasses.length === 0 ? (
+                <div style={styles.emptyState}>No classes assigned.</div>
+              ) : (
+                myClasses.map((cs) => (
+                  <div
+                    key={cs.id}
+                    style={styles.classItem}
+                    onClick={() => navigate(`/teacher/attendance/${cs.classroomId}/${cs.subjectId}`)}
+                  >
+                    <div style={styles.classIcon}>
+                      {cs.subjectName.charAt(0)}
+                    </div>
+                    <div style={styles.classContent}>
+                      <div style={styles.className}>{cs.classroomName}</div>
+                      <div style={styles.subjectName}>{cs.subjectName}</div>
+                    </div>
+                    <div style={styles.classArrow}>→</div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="premium-card" style={styles.quickAccessCard}>
+            <h3 style={styles.cardSectionTitle}>Quick Actions</h3>
+            <div style={styles.actionGrid}>
+              <button style={styles.actionItem} onClick={() => navigate("/assignments")}>
+                <div style={{ ...styles.actionIcon, background: "rgba(30, 136, 229, 0.1)", color: "var(--primary-color)" }}>A</div>
+                <span>Assignments</span>
+              </button>
+              <button style={styles.actionItem} onClick={() => navigate("/marks")}>
+                <div style={{ ...styles.actionIcon, background: "rgba(16, 185, 129, 0.1)", color: "#10b981" }}>M</div>
+                <span>Marks Entry</span>
+              </button>
+              <button style={styles.actionItem} onClick={() => navigate("/attendance")}>
+                <div style={{ ...styles.actionIcon, background: "rgba(245, 158, 11, 0.1)", color: "#f59e0b" }}>T</div>
+                <span>Attendance</span>
+              </button>
+              <button style={styles.actionItem} onClick={() => navigate("/syllabus")}>
+                <div style={{ ...styles.actionIcon, background: "rgba(124, 58, 237, 0.1)", color: "#7c3aed" }}>S</div>
+                <span>Syllabus</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
+
+      {rightPanelOpen && (
+        <>
+          <div style={styles.drawerBackdrop} onClick={closeRightPanel} />
+          <div style={{
+            ...styles.rightDrawer,
+            transform: rightPanelOpen ? "translateX(0)" : "translateX(100%)",
+            opacity: rightPanelOpen ? 1 : 0
+          }}>
+            <div style={styles.drawerHeader}>
+              <h3 style={styles.drawerTitle}>
+                {rightPanelContent === "TIMETABLE" ? "Academic Schedule" : "School Events"}
+              </h3>
+              <button className="modern-btn" style={styles.closeBtn} onClick={closeRightPanel}>✕</button>
+            </div>
+
+            <div style={styles.drawerBody}>
+              {rightPanelContent === "TIMETABLE" && (
+                <div style={styles.ttWrapper}>
+                  <table style={styles.ttTable}>
+                    <thead>
+                      <tr>
+                        <th style={styles.ttTh}>Slot</th>
+                        {DAY_KEYS.map(d => <th key={d} style={styles.ttTh}>{d}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {Array.from({ length: MAX_PERIODS }, (_, i) => i + 1).map(p => (
+                        <tr key={p}>
+                          <td style={styles.ttTdPeriod}>P{p}</td>
+                          {DAY_KEYS.map(d => (
+                            <td key={`${d}_${p}`} style={styles.ttTd}>
+                              <div style={styles.ttCellContent}>
+                                {getSubjectName(timetableMap[`${d}_${p}`])}
+                              </div>
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {rightPanelContent === "CALENDAR" && (
+                <div>
+                  <div style={styles.calNav}>
+                    <button className="modern-btn btn-outline" onClick={() => changeMonth(-1)}>◀</button>
+                    <span style={styles.calMonthName}>
+                      {currentMonth.toLocaleString("default", { month: "long", year: "numeric" })}
+                    </span>
+                    <button className="modern-btn btn-outline" onClick={() => changeMonth(1)}>▶</button>
+                  </div>
+
+                  <div style={styles.calGrid}>
+                    {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+                      <div key={i} style={styles.calDayHeader}>{d}</div>
+                    ))}
+                    {getCalendarDays().map((date, idx) => {
+                      const status = getDayStatus(date);
+                      return (
+                        <div key={idx} style={{
+                          ...styles.calCell,
+                          background: getColor(status),
+                          borderColor: getStatusBorder(status)
+                        }}>
+                          <span style={{
+                            ...styles.calDateNum,
+                            color: date?.getMonth() !== currentMonth.getMonth() ? "var(--text-muted)" : "var(--text-primary)"
+                          }}>{date?.getDate()}</span>
+                          {status && status !== "WORKING" && (
+                            <span style={{ ...styles.calStatusLabel, color: getStatusBorder(status) }}>
+                              {status.split("_")[0]}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
+};
+
+const styles = {
+  container: {
+    maxWidth: "1200px",
+    margin: "0 auto",
+    paddingBottom: "40px",
+  },
+  loaderContainer: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: "60vh",
+  },
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "40px",
+  },
+  title: {
+    fontSize: "32px",
+    fontWeight: "800",
+    marginBottom: "8px",
+    letterSpacing: "-0.5px",
+  },
+  schoolTag: {
+    display: "flex",
+    alignItems: "center",
+    color: "var(--primary-color)",
+    fontSize: "15px",
+    fontWeight: "600",
+    opacity: 0.9,
+  },
+  headerActions: {
+    display: "flex",
+    gap: "12px",
+  },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 340px",
+    gap: "32px",
+  },
+  cardSectionTitle: {
+    fontSize: "14px",
+    fontWeight: "700",
+    marginBottom: "20px",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    color: "var(--text-muted)",
+    textTransform: "uppercase",
+    letterSpacing: "1px",
+    borderBottom: "1px solid var(--border-color)",
+    paddingBottom: "12px",
+  },
+  formCard: {
+    padding: "24px",
+    marginBottom: "32px",
+  },
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+  },
+  formFooter: {
+    display: "flex",
+    gap: "12px",
+    alignItems: "center",
+  },
+  feedHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "24px",
+    padding: "0 4px",
+  },
+  feedTitle: {
+    fontSize: "20px",
+    fontWeight: "700",
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    color: "var(--text-primary)",
+    margin: 0,
+  },
+  feedCount: {
+    fontSize: "12px",
+    fontWeight: "600",
+    color: "var(--text-muted)",
+    backgroundColor: "var(--background-color)",
+    padding: "4px 10px",
+    borderRadius: "20px",
+  },
+  feed: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "20px",
+  },
+  feedCard: {
+    padding: "24px",
+    border: "1px solid var(--border-color)",
+    transition: "transform 0.2s, box-shadow 0.2s",
+  },
+  feedCardHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: "16px",
+  },
+  feedCardTitle: {
+    margin: 0,
+    fontSize: "18px",
+    fontWeight: "700",
+    color: "var(--text-primary)",
+  },
+  classBadge: {
+    fontSize: "11px",
+    fontWeight: "700",
+    backgroundColor: "rgba(30, 136, 229, 0.1)",
+    color: "var(--primary-color)",
+    padding: "4px 10px",
+    borderRadius: "12px",
+  },
+  schoolBadge: {
+    fontSize: "11px",
+    fontWeight: "700",
+    backgroundColor: "rgba(107, 114, 128, 0.1)",
+    color: "var(--text-secondary)",
+    padding: "4px 10px",
+    borderRadius: "12px",
+  },
+  feedCardMsg: {
+    fontSize: "15px",
+    color: "var(--text-secondary)",
+    lineHeight: "1.6",
+    marginBottom: "20px",
+  },
+  feedCardFooter: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: "16px",
+    borderTop: "1px solid var(--border-color)",
+  },
+  footerInfo: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    fontSize: "12px",
+    color: "var(--text-muted)",
+    fontWeight: "500",
+  },
+  sideSubtitle: {
+    fontSize: "13px",
+    color: "var(--text-muted)",
+    marginTop: "-16px",
+    marginBottom: "20px",
+  },
+  classesCard: {
+    padding: "24px",
+    marginBottom: "24px",
+  },
+  classList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+  },
+  classItem: {
+    display: "flex",
+    alignItems: "center",
+    padding: "12px",
+    backgroundColor: "var(--background-color)",
+    borderRadius: "12px",
+    cursor: "pointer",
+    transition: "all 0.2s",
+    border: "1px solid transparent",
+  },
+  classIcon: {
+    width: "40px",
+    height: "40px",
+    borderRadius: "10px",
+    backgroundColor: "white",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "18px",
+    fontWeight: "700",
+    color: "var(--primary-color)",
+    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+  },
+  classContent: {
+    flex: 1,
+    marginLeft: "16px",
+  },
+  className: {
+    fontWeight: "700",
+    fontSize: "14px",
+    color: "var(--text-primary)",
+  },
+  subjectName: {
+    fontSize: "12px",
+    color: "var(--text-muted)",
+  },
+  classArrow: {
+    color: "var(--text-muted)",
+    opacity: 0.5,
+    fontSize: "18px",
+  },
+  quickAccessCard: {
+    padding: "24px",
+  },
+  actionGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "12px",
+  },
+  actionItem: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    gap: "8px",
+    padding: "16px",
+    borderRadius: "12px",
+    background: "var(--background-color)",
+    border: "none",
+    cursor: "pointer",
+    transition: "transform 0.2s",
+  },
+  actionIcon: {
+    width: "40px",
+    height: "40px",
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "14px",
+    fontWeight: "800",
+  },
+  emptyFeed: {
+    padding: "60px 40px",
+    textAlign: "center",
+    color: "var(--text-muted)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+  },
+  emptyState: {
+    textAlign: "center",
+    color: "var(--text-muted)",
+    padding: "20px",
+    fontSize: "14px",
+  },
+  drawerBackdrop: {
+    position: "fixed",
+    inset: 0,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    backdropFilter: "blur(4px)",
+    zIndex: 1400,
+  },
+  rightDrawer: {
+    position: "fixed",
+    top: 0,
+    right: 0,
+    width: "600px",
+    height: "100vh",
+    backgroundColor: "var(--surface-color)",
+    boxShadow: "-15px 0 45px rgba(0,0,0,0.15)",
+    zIndex: 1500,
+    padding: "40px",
+    overflowY: "auto",
+    transition: "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s",
+  },
+  drawerHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: "40px",
+    borderBottom: "1px solid var(--border-color)",
+    paddingBottom: "20px",
+  },
+  drawerTitle: {
+    margin: 0,
+    fontSize: "24px",
+    fontWeight: "800",
+    letterSpacing: "-0.5px",
+  },
+  closeBtn: {
+    width: "40px",
+    height: "40px",
+    borderRadius: "50%",
+    background: "var(--background-color)",
+    border: "none",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "16px",
+    cursor: "pointer",
+  },
+  ttTable: {
+    width: "100%",
+    borderCollapse: "separate",
+    borderSpacing: "4px",
+  },
+  ttTh: {
+    textAlign: "center",
+    padding: "16px 8px",
+    fontSize: "11px",
+    fontWeight: "700",
+    textTransform: "uppercase",
+    color: "var(--text-muted)",
+    letterSpacing: "1px",
+  },
+  ttTd: {
+    padding: "4px",
+    width: "14%",
+  },
+  ttCellContent: {
+    padding: "12px 8px",
+    backgroundColor: "var(--background-color)",
+    borderRadius: "8px",
+    fontSize: "12px",
+    fontWeight: "600",
+    textAlign: "center",
+    minHeight: "44px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "var(--text-secondary)",
+  },
+  ttTdPeriod: {
+    fontWeight: "800",
+    color: "var(--primary-color)",
+    padding: "16px 8px",
+    fontSize: "14px",
+    textAlign: "center",
+  },
+  calNav: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "32px",
+    marginBottom: "32px",
+  },
+  calMonthName: {
+    fontSize: "20px",
+    fontWeight: "700",
+    minWidth: "180px",
+    textAlign: "center",
+  },
+  calGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(7, 1fr)",
+    gap: "10px",
+  },
+  calDayHeader: {
+    textAlign: "center",
+    padding: "12px",
+    fontSize: "12px",
+    fontWeight: "800",
+    color: "var(--text-muted)",
+  },
+  calCell: {
+    height: "90px",
+    padding: "10px",
+    borderRadius: "16px",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    border: "2px solid transparent",
+    transition: "transform 0.2s",
+  },
+  calDateNum: {
+    fontWeight: "800",
+    fontSize: "16px",
+  },
+  calStatusLabel: {
+    fontSize: "10px",
+    fontWeight: "800",
+    textAlign: "right",
+    textTransform: "uppercase",
+  }
 };
 
 export default TeacherDashboard;

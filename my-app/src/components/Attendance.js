@@ -1,6 +1,4 @@
 import React, { useEffect, useState } from "react";
-import Sidebar from "./Sidebar";
-import Navbar from "./Navbar";
 import {
   getAllClassrooms,
   getAllTimetables,
@@ -13,18 +11,21 @@ import {
   getAttendanceByClassDatePeriod,
 } from "../utils/api";
 import { getDecodedToken } from "../utils/authHelper";
+import {
+  FaFilter, FaUsers, FaUndo, FaCheckCircle,
+  FaTrash, FaUserCheck, FaRegCalendarAlt
+} from "react-icons/fa";
 
 const Attendance = ({ isTeacher = false }) => {
   const decoded = getDecodedToken();
   const schoolId = decoded?.schoolId;
 
-  // params pre-selection logic kept in your original version if needed (you can pass in props)
   const [classrooms, setClassrooms] = useState([]);
   const [timetables, setTimetables] = useState([]);
   const [classSubjects, setClassSubjects] = useState([]);
 
-  const [selectedClassId, setSelectedClassId] = useState(isTeacher ? null : null);
-  const [selectedSubjectId, setSelectedSubjectId] = useState(isTeacher ? null : null);
+  const [selectedClassId, setSelectedClassId] = useState(null);
+  const [selectedSubjectId, setSelectedSubjectId] = useState(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedPeriod, setSelectedPeriod] = useState(null);
 
@@ -36,12 +37,8 @@ const Attendance = ({ isTeacher = false }) => {
   const [alreadyMarked, setAlreadyMarked] = useState({});
   const [loading, setLoading] = useState(false);
   const [studentFetchError, setStudentFetchError] = useState("");
-
-  // small UI state
-  const [filtersOpen, setFiltersOpen] = useState(true);
   const [selectAll, setSelectAll] = useState(false);
 
-  // helpers: day short
   const getDayShort = (date) => {
     const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
     return days[new Date(date).getDay()];
@@ -68,16 +65,12 @@ const Attendance = ({ isTeacher = false }) => {
     })();
   }, [schoolId]);
 
-  // derived: classSubjects for selected class
   const classSubjectsForClass = () =>
     classSubjects.filter((cs) => cs.classroomId === selectedClassId);
 
-  // available periods for subject based on timetable/day
   const availablePeriodsForSubject = () => {
     if (!selectedClassId || !selectedSubjectId || !selectedDate) return [];
-
     const day = getDayShort(selectedDate);
-
     return timetables
       .filter(
         (t) =>
@@ -94,7 +87,6 @@ const Attendance = ({ isTeacher = false }) => {
     setSelectedPeriod(p.length > 0 ? p[0] : null);
   }, [selectedSubjectId, selectedDate, timetables]);
 
-  // check calendar
   const checkCalendarForDate = async (date) => {
     if (!date) {
       setCalendarStatus(null);
@@ -119,7 +111,6 @@ const Attendance = ({ isTeacher = false }) => {
     }
   };
 
-  // fetch attendance & students
   const fetchAttendanceForPeriod = async () => {
     if (!selectedClassId || !selectedSubjectId || !selectedDate || !selectedPeriod) {
       setStudents([]);
@@ -132,30 +123,24 @@ const Attendance = ({ isTeacher = false }) => {
     setStudentFetchError("");
     try {
       await checkCalendarForDate(selectedDate);
-
       const enrollRes = await getAllEnrollments();
       const filtered = (enrollRes.data || []).filter(
         (en) => en.classroomId === selectedClassId
       );
 
-      // Map students
       const studentList = filtered.map((s) => ({
         studentId: s.studentId,
         name: s.studentName,
       }));
-
       setStudents(studentList);
 
-      // Attendance fetch
       const attRes = await getAttendanceByClassDatePeriod(
         selectedClassId,
         selectedSubjectId,
         selectedDate,
         selectedPeriod
       );
-
       const existing = attRes.data || [];
-
       const map = {};
       const markers = {};
 
@@ -188,10 +173,8 @@ const Attendance = ({ isTeacher = false }) => {
 
   useEffect(() => {
     fetchAttendanceForPeriod();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedClassId, selectedSubjectId, selectedDate, selectedPeriod]);
 
-  // set single student's status
   const setStudentStatus = (studentId, status) => {
     setAttendanceMap((prev) => {
       const next = {
@@ -205,7 +188,6 @@ const Attendance = ({ isTeacher = false }) => {
     });
   };
 
-  // select/unselect all (toggle)
   const toggleSelectAll = () => {
     const newVal = !selectAll;
     setSelectAll(newVal);
@@ -218,7 +200,6 @@ const Attendance = ({ isTeacher = false }) => {
     });
   };
 
-  // save attendance (create or update)
   const submitAttendanceHandler = async () => {
     if (!selectedClassId || !selectedSubjectId || !selectedDate || !selectedPeriod) {
       alert("Please select Class, Subject, Date and Period");
@@ -254,7 +235,6 @@ const Attendance = ({ isTeacher = false }) => {
     }
   };
 
-  // delete single attendance record
   const handleDelete = async (studentId) => {
     const info = attendanceMap[studentId];
     if (!info?.attendanceId) return;
@@ -273,383 +253,475 @@ const Attendance = ({ isTeacher = false }) => {
     }
   };
 
-  // summary counts
   const presentCount = students.filter((s) => attendanceMap[s.studentId]?.status === "PRESENT").length;
   const absentCount = students.filter((s) => attendanceMap[s.studentId]?.status === "ABSENT").length;
 
-  // color for row
-  const rowColor = (studentId) => {
-    const info = attendanceMap[studentId] || {};
-    if (info.status === "ABSENT") return "#fff1f0";
-    if (alreadyMarked[studentId]) return "#f7fff7";
-    return "white";
-  };
-
-  // small helper to display subject name from id
   const subjectNameFromId = (id) => {
     const cs = classSubjects.find((c) => c.subjectId === id);
     return cs?.subjectName || "";
   };
 
   return (
-    <div className="att-page">
-      <Sidebar />
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1 style={styles.title}>Attendance Management</h1>
+        <p style={styles.subtitle}>Track and record student presence across classes</p>
+      </div>
 
-      <div className="att-content">
-        <Navbar />
+      <div style={styles.mainGrid}>
+        <div style={styles.filterCol}>
+          <div className="premium-card" style={styles.filterCard}>
+            <h3 style={styles.sectionTitle}>
+              <FaFilter size={14} /> Attendance Filters
+            </h3>
+            <div style={styles.filterGroup}>
+              <label style={styles.label}>Academic Class</label>
+              <select
+                className="modern-input"
+                value={selectedClassId || ""}
+                onChange={(e) => {
+                  const val = e.target.value ? Number(e.target.value) : null;
+                  setSelectedClassId(val);
+                  setSelectedSubjectId(null);
+                  setSelectedDate("");
+                  setSelectedPeriod(null);
+                  setStudents([]);
+                  setAttendanceMap({});
+                  setAlreadyMarked({});
+                }}
+              >
+                <option value="">-- Choose Class --</option>
+                {classrooms.map((c) => (
+                  <option key={c.classId} value={c.classId}>
+                    {c.name} {c.section ? `- ${c.section}` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-        <div className="att-wrapper">
-          <h2 className="att-title">Attendance</h2>
+            <div style={styles.filterGroup}>
+              <label style={styles.label}>Subject</label>
+              <select
+                className="modern-input"
+                value={selectedSubjectId || ""}
+                onChange={(e) => {
+                  const val = e.target.value ? Number(e.target.value) : null;
+                  setSelectedSubjectId(val);
+                  setSelectedPeriod(null);
+                }}
+                disabled={!selectedClassId}
+              >
+                <option value="">-- Choose Subject --</option>
+                {classSubjectsForClass().map((cs) => (
+                  <option key={cs.id} value={cs.subjectId}>
+                    {cs.subjectName}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          <div className="att-grid">
-            {/* LEFT FILTER PANE */}
-            <aside className={`att-filters ${filtersOpen ? "open" : "closed"}`}>
-              <div className="filters-header">
-                <strong>Filters</strong>
-                <button className="filters-toggle" onClick={() => setFiltersOpen(p => !p)}>
-                  {filtersOpen ? "Close" : "Open"}
-                </button>
-              </div>
+            <div style={styles.filterGroup}>
+              <label style={styles.label}>Record Date</label>
+              <input
+                type="date"
+                className="modern-input"
+                value={selectedDate}
+                onChange={(e) => {
+                  setSelectedDate(e.target.value);
+                  setSelectedPeriod(null);
+                  if (e.target.value) checkCalendarForDate(e.target.value);
+                }}
+              />
+            </div>
 
-              <div className="filter-row">
-                <label>Class</label>
-                <select
-                  value={selectedClassId || ""}
-                  onChange={(e) => {
-                    const val = e.target.value ? Number(e.target.value) : null;
-                    setSelectedClassId(val);
-                    // reset dependant fields
-                    setSelectedSubjectId(null);
-                    setSelectedDate("");
-                    setSelectedPeriod(null);
-                    setStudents([]);
-                    setAttendanceMap({});
-                    setAlreadyMarked({});
-                  }}
-                >
-                  <option value="">-- Select class --</option>
-                  {classrooms.map((c) => (
-                    <option key={c.classId} value={c.classId}>
-                      {c.name} {c.section ? `- ${c.section}` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div style={styles.filterGroup}>
+              <label style={styles.label}>Academic Period</label>
+              <select
+                className="modern-input"
+                value={selectedPeriod || ""}
+                onChange={(e) => setSelectedPeriod(Number(e.target.value))}
+                disabled={!selectedSubjectId || !selectedDate}
+              >
+                <option value="">-- Choose Period --</option>
+                {availablePeriodsForSubject().map((p) => (
+                  <option key={p} value={p}>
+                    Period {p}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-              <div className="filter-row">
-                <label>Subject</label>
-                <select
-                  value={selectedSubjectId || ""}
-                  onChange={(e) => {
-                    const val = e.target.value ? Number(e.target.value) : null;
-                    setSelectedSubjectId(val);
-                    setSelectedPeriod(null);
-                  }}
-                  disabled={!selectedClassId}
-                >
-                  <option value="">-- Select subject --</option>
-                  {classSubjectsForClass().map((cs) => (
-                    <option key={cs.id} value={cs.subjectId}>
-                      {cs.subjectName}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div style={styles.calendarInfo}>
+              <FaRegCalendarAlt size={12} />
+              <span>System Day: <strong>{calendarStatus || "Not Checked"}</strong></span>
+            </div>
 
-              <div className="filter-row">
-                <label>Date</label>
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => {
-                    setSelectedDate(e.target.value);
-                    setSelectedPeriod(null);
-                    // also re-check calendar when date changes
-                    if (e.target.value) checkCalendarForDate(e.target.value);
-                  }}
-                />
-              </div>
+            <div style={styles.filterFooter}>
+              <button
+                className="modern-btn btn-primary"
+                style={{ flex: 1 }}
+                onClick={submitAttendanceHandler}
+                disabled={!students.length || loading}
+              >
+                {loading ? "Syncing..." : "Commit Record"}
+              </button>
+              <button
+                className="modern-btn btn-outline"
+                onClick={() => {
+                  setSelectedClassId(null);
+                  setSelectedSubjectId(null);
+                  setSelectedDate("");
+                  setSelectedPeriod(null);
+                  setStudents([]);
+                  setAttendanceMap({});
+                  setAlreadyMarked({});
+                }}
+              >
+                <FaUndo />
+              </button>
+            </div>
+          </div>
 
-              <div className="filter-row">
-                <label>Period</label>
-                <select
-                  value={selectedPeriod || ""}
-                  onChange={(e) => setSelectedPeriod(Number(e.target.value))}
-                  disabled={!selectedSubjectId || !selectedDate}
-                >
-                  <option value="">-- Select period --</option>
-                  {availablePeriodsForSubject().map((p) => (
-                    <option key={p} value={p}>
-                      Period {p}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="filter-row small-info">
-                <div>
-                  <strong>Calendar:</strong> <span className="muted">{calendarStatus || "-"}</span>
+          {students.length > 0 && (
+            <div className="premium-card" style={styles.summaryCard}>
+              <h3 style={styles.sectionTitle}><FaUsers /> Record Summary</h3>
+              <div style={styles.summaryStats}>
+                <div style={styles.statLine}>
+                  <span style={styles.statLabel}>Present</span>
+                  <span style={{ ...styles.statValue, color: "var(--success-color)" }}>{presentCount}</span>
+                </div>
+                <div style={styles.statLine}>
+                  <span style={styles.statLabel}>Absent</span>
+                  <span style={{ ...styles.statValue, color: "var(--error-color)" }}>{absentCount}</span>
+                </div>
+                <div style={styles.statLine}>
+                  <span style={styles.statLabel}>Total Cohort</span>
+                  <span style={styles.statValue}>{students.length}</span>
+                </div>
+                <div style={styles.progressBar}>
+                  <div style={{
+                    ...styles.progressFill,
+                    width: `${(presentCount / students.length) * 100}%`,
+                    backgroundColor: "var(--success-color)"
+                  }}></div>
                 </div>
               </div>
+            </div>
+          )}
+        </div>
 
-              <div className="filter-actions">
-                <button
-                  className="btn save"
-                  onClick={submitAttendanceHandler}
-                  disabled={!students.length || loading}
-                >
-                  {loading ? "Saving..." : "Save Attendance"}
-                </button>
-
-                <button
-                  className="btn reset"
-                  onClick={() => {
-                    setSelectedClassId(null);
-                    setSelectedSubjectId(null);
-                    setSelectedDate("");
-                    setSelectedPeriod(null);
-                    setStudents([]);
-                    setAttendanceMap({});
-                    setAlreadyMarked({});
-                    setSelectAll(false);
-                  }}
-                >
-                  Reset
-                </button>
-              </div>
-            </aside>
-
-            {/* RIGHT MAIN */}
-            <main className="att-main">
-              <div className="att-controls">
+        <div style={styles.contentCol}>
+          {!selectedClassId || !selectedSubjectId || !selectedDate || !selectedPeriod ? (
+            <div className="premium-card" style={styles.emptyState}>
+              <FaUserCheck size={48} style={{ opacity: 0.1, marginBottom: "20px" }} />
+              <h3>Ready to Mark</h3>
+              <p>Configure your filters on the left to load the pupil list for this session.</p>
+            </div>
+          ) : (
+            <div className="premium-card" style={styles.listCard}>
+              <div style={styles.listHeader}>
                 <div>
-                  <strong>Class: </strong>
-                  <span>{classrooms.find(c => c.classId === selectedClassId)?.name || "-"}</span>
-                  {" • "}
-                  <strong>Subject: </strong>
-                  <span>{subjectNameFromId(selectedSubjectId) || "-"}</span>
+                  <h3 style={styles.listTitle}>
+                    {classrooms.find(c => c.classId === selectedClassId)?.name} • {subjectNameFromId(selectedSubjectId)}
+                  </h3>
+                  <p style={styles.listSubtitle}>Period {selectedPeriod} | {new Date(selectedDate).toLocaleDateString()}</p>
                 </div>
-
-                <div className="selectall-row">
-                  <label>
+                <div style={styles.headerActions}>
+                  <label style={styles.checkAllLabel}>
                     <input
                       type="checkbox"
                       checked={selectAll}
                       onChange={toggleSelectAll}
-                      disabled={!students.length}
-                    />{" "}
-                    Mark all Present
+                    />
+                    <span>Mark All Present</span>
                   </label>
                 </div>
               </div>
 
-              <div className="students-card">
-                {loading && <div className="info">Loading...</div>}
-                {!loading && studentFetchError && <div className="error">{studentFetchError}</div>}
-
-                {!loading && !students.length && !studentFetchError && (
-                  <div className="info">No students to display — choose class/subject/date/period.</div>
-                )}
-
-                {!loading && students.length > 0 && (
-                  <>
-                    <div className="table-wrap">
-                      <table className="styled-table">
-                        <thead>
-                          <tr>
-                            <th style={{ width: 40 }}>#</th>
-                            <th>Name</th>
-                            <th style={{ width: 160 }}>Status</th>
-                            <th style={{ width: 90 }}>Delete</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {students.map((stu, idx) => {
-                            const info = attendanceMap[stu.studentId] || { status: "PRESENT", attendanceId: null };
-                            return (
-                              <tr key={stu.studentId} style={{ background: rowColor(stu.studentId) }}>
-                                <td>{idx + 1}</td>
-                                <td>{stu.name}</td>
-                                <td>
-                                  <select
-                                    value={info.status}
-                                    onChange={(e) => setStudentStatus(stu.studentId, e.target.value)}
-                                  >
-                                    <option value="PRESENT">Present</option>
-                                    <option value="ABSENT">Absent</option>
-                                  </select>
-                                </td>
-                                <td>
-                                  <button
-                                    className="btn delete-small"
-                                    disabled={!info.attendanceId}
-                                    onClick={() => handleDelete(stu.studentId)}
-                                  >
-                                    Delete
-                                  </button>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* summary */}
-                    <div className="summary">
-                      <div>Present: <strong>{presentCount}</strong></div>
-                      <div>Absent: <strong>{absentCount}</strong></div>
-                      <div>Total: <strong>{students.length}</strong></div>
-                    </div>
-                  </>
-                )}
+              <div style={styles.tableWrapper}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={styles.th}>#</th>
+                      <th style={styles.th}>Student Name</th>
+                      <th style={styles.th}>Presence Status</th>
+                      <th style={styles.th}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {students.map((stu, idx) => {
+                      const info = attendanceMap[stu.studentId] || { status: "PRESENT", attendanceId: null };
+                      return (
+                        <tr key={stu.studentId} style={{
+                          ...styles.tr,
+                          backgroundColor: info.status === "ABSENT" ? "rgba(239, 68, 68, 0.03)" : "transparent"
+                        }}>
+                          <td style={styles.td}>{idx + 1}</td>
+                          <td style={styles.td}>
+                            <div style={styles.studentCell}>
+                              <div style={styles.avatarMini}>{stu.name.charAt(0)}</div>
+                              <span style={styles.name}>{stu.name}</span>
+                              {alreadyMarked[stu.studentId] && <FaCheckCircle style={styles.savedIcon} title="Already synchronized" />}
+                            </div>
+                          </td>
+                          <td style={styles.td}>
+                            <select
+                              style={{
+                                ...styles.statusSelect,
+                                color: info.status === "PRESENT" ? "var(--success-color)" : "var(--error-color)"
+                              }}
+                              value={info.status}
+                              onChange={(e) => setStudentStatus(stu.studentId, e.target.value)}
+                            >
+                              <option value="PRESENT">Present</option>
+                              <option value="ABSENT">Absent</option>
+                            </select>
+                          </td>
+                          <td style={styles.td}>
+                            {info.attendanceId && (
+                              <button
+                                style={styles.deleteBtn}
+                                onClick={() => handleDelete(stu.studentId)}
+                                title="Clear record"
+                              >
+                                <FaTrash size={12} />
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
-            </main>
-          </div>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* INLINE STYLES */}
-      <style>{`
-        :root {
-          --primary: #0a4275;
-          --muted: #666;
-          --card-bg: #fff;
-          --surface: #f3f5f9;
-        }
-
-        .att-page {
-          display:flex;
-          width:100%;
-        }
-
-        .att-content {
-          flex:1;
-          background: var(--surface);
-          min-height:100vh;
-        }
-
-        .att-wrapper {
-          max-width:1100px;
-          margin: 18px auto;
-          padding: 18px;
-        }
-
-        .att-title {
-          text-align:center;
-          color: var(--primary);
-          font-size: 26px;
-          margin-bottom: 16px;
-          font-weight:700;
-        }
-
-        .att-grid {
-          display: grid;
-          grid-template-columns: 320px 1fr;
-          gap: 18px;
-          align-items: start;
-        }
-
-        /* Filters pane */
-        .att-filters {
-          background: var(--card-bg);
-          border-radius: 10px;
-          padding: 14px;
-          box-shadow: 0 6px 18px rgba(10,66,117,0.06);
-          position: sticky;
-          top: 18px;
-          height: fit-content;
-        }
-
-        .att-filters.closed { display:block; } /* toggle only hides via CSS below on mobile */
-
-        .filters-header {
-          display:flex;
-          justify-content:space-between;
-          align-items:center;
-          margin-bottom:10px;
-        }
-
-        .filters-toggle {
-          background: transparent;
-          border: none;
-          color: var(--primary);
-          font-weight:600;
-          cursor:pointer;
-        }
-
-        .filter-row { margin-bottom: 10px; display:flex; flex-direction:column; gap:6px; }
-        .filter-row label { font-size: 13px; color:var(--muted); }
-        .filter-row input[type="date"], .filter-row select {
-          padding:8px 10px;
-          border-radius:6px;
-          border:1px solid #ddd;
-          font-size:14px;
-        }
-
-        .filter-actions { display:flex; gap:8px; margin-top:8px; }
-        .btn { padding:10px 12px; border-radius:8px; border:none; cursor:pointer; font-weight:600; }
-        .btn.save { background: var(--primary); color:white; flex:1; }
-        .btn.reset { background:#eee; color:#333; }
-
-        /* main area */
-        .att-main {  }
-
-        .att-controls {
-          display:flex;
-          justify-content:space-between;
-          align-items:center;
-          margin-bottom:12px;
-          gap:12px;
-          flex-wrap:wrap;
-        }
-
-        .selectall-row { font-size:14px; color:var(--muted); }
-
-        .students-card {
-          background: var(--card-bg);
-          border-radius:10px;
-          padding:12px;
-          box-shadow: 0 6px 18px rgba(10,66,117,0.04);
-        }
-
-        .table-wrap { overflow-x:auto; margin-bottom:12px; }
-
-        .styled-table { width:100%; border-collapse:collapse; }
-        .styled-table th { text-align:left; background:#f1f6fb; padding:10px; font-weight:700; color:#222; }
-        .styled-table td { padding:10px; border-top:1px solid #f0f0f0; vertical-align:middle; }
-
-        .btn.delete-small { background:#e53935; color:white; padding:6px 8px; border-radius:6px; border:none; cursor:pointer; }
-        .btn.delete-small:disabled { opacity:0.5; cursor:not-allowed; background:#ccc; }
-
-        .summary {
-          display:flex;
-          gap:18px;
-          margin-top:8px;
-          font-size:14px;
-          color:var(--muted);
-        }
-
-        .info { padding:12px; color:var(--muted); }
-        .error { padding:12px; color:#b00020; }
-
-        /* responsive */
-        @media (max-width: 1000px) {
-          .att-grid { grid-template-columns: 1fr; }
-          .att-filters { position:relative; top:0; order:2; }
-          .att-main { order:1; }
-        }
-
-        @media (max-width: 640px) {
-          .att-wrapper { padding:12px; max-width: 96%; }
-          .filter-row label { font-size:12px; }
-          .filters-toggle { font-size:13px; }
-          .filters-header strong { font-size:14px; }
-          .att-filters { display: ${filtersOpen ? "block" : "none"}; } /* dynamic fallback */
-        }
-      `}</style>
     </div>
   );
+};
+
+const styles = {
+  container: {
+    maxWidth: "1100px",
+    margin: "0 auto",
+  },
+  header: {
+    marginBottom: "32px",
+  },
+  title: {
+    fontSize: "28px",
+    fontWeight: "700",
+    marginBottom: "4px",
+  },
+  subtitle: {
+    color: "var(--text-muted)",
+    fontSize: "14px",
+  },
+  mainGrid: {
+    display: "grid",
+    gridTemplateColumns: "320px 1fr",
+    gap: "32px",
+    alignItems: "start",
+  },
+  filterCol: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "24px",
+  },
+  filterCard: {
+    padding: "24px",
+  },
+  sectionTitle: {
+    fontSize: "16px",
+    fontWeight: "700",
+    marginBottom: "20px",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    color: "var(--text-primary)",
+    borderBottom: "1px solid var(--border-color)",
+    paddingBottom: "12px",
+  },
+  filterGroup: {
+    marginBottom: "16px",
+  },
+  label: {
+    display: "block",
+    fontSize: "12px",
+    fontWeight: "600",
+    color: "var(--text-muted)",
+    marginBottom: "6px",
+    textTransform: "uppercase",
+    letterSpacing: "0.5px",
+  },
+  calendarInfo: {
+    fontSize: "12px",
+    color: "var(--text-muted)",
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "12px",
+    backgroundColor: "var(--background-color)",
+    borderRadius: "8px",
+    marginBottom: "20px",
+  },
+  filterFooter: {
+    display: "flex",
+    gap: "10px",
+  },
+  summaryCard: {
+    padding: "20px",
+  },
+  summaryStats: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "12px",
+  },
+  statLine: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  statLabel: {
+    fontSize: "14px",
+    color: "var(--text-secondary)",
+  },
+  statValue: {
+    fontSize: "16px",
+    fontWeight: "700",
+  },
+  progressBar: {
+    height: "6px",
+    backgroundColor: "var(--border-color)",
+    borderRadius: "3px",
+    overflow: "hidden",
+    marginTop: "8px",
+  },
+  progressFill: {
+    height: "100%",
+    transition: "width 0.3s ease",
+  },
+  contentCol: {
+    minWidth: 0,
+  },
+  emptyState: {
+    padding: "80px 40px",
+    textAlign: "center",
+    color: "var(--text-muted)",
+  },
+  listCard: {
+    padding: "0",
+    overflow: "hidden",
+  },
+  listHeader: {
+    padding: "24px",
+    borderBottom: "1px solid var(--border-color)",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "rgba(0,0,0,0.01)",
+  },
+  listTitle: {
+    margin: 0,
+    fontSize: "18px",
+    fontWeight: "700",
+  },
+  listSubtitle: {
+    margin: "4px 0 0 0",
+    fontSize: "13px",
+    color: "var(--text-muted)",
+  },
+  headerActions: {
+    display: "flex",
+    alignItems: "center",
+  },
+  checkAllLabel: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    fontSize: "13px",
+    fontWeight: "600",
+    color: "var(--primary-color)",
+    cursor: "pointer",
+    padding: "8px 12px",
+    borderRadius: "6px",
+    backgroundColor: "rgba(30, 136, 229, 0.05)",
+  },
+  tableWrapper: {
+    overflowX: "auto",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+  },
+  th: {
+    textAlign: "left",
+    padding: "14px 24px",
+    fontSize: "13px",
+    fontWeight: "600",
+    color: "var(--text-muted)",
+    backgroundColor: "var(--background-color)",
+    borderBottom: "1px solid var(--border-color)",
+  },
+  tr: {
+    borderBottom: "1px solid var(--border-color)",
+    transition: "background-color 0.2s",
+  },
+  td: {
+    padding: "14px 24px",
+    fontSize: "14px",
+    verticalAlign: "middle",
+  },
+  studentCell: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+  },
+  avatarMini: {
+    width: "28px",
+    height: "28px",
+    borderRadius: "50%",
+    backgroundColor: "var(--border-color)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "12px",
+    fontWeight: "700",
+    color: "var(--text-secondary)",
+  },
+  name: {
+    fontWeight: "500",
+    color: "var(--text-primary)",
+  },
+  savedIcon: {
+    color: "var(--success-color)",
+    fontSize: "12px",
+  },
+  statusSelect: {
+    padding: "6px 12px",
+    borderRadius: "6px",
+    border: "1px solid var(--border-color)",
+    backgroundColor: "white",
+    fontSize: "13px",
+    fontWeight: "600",
+    cursor: "pointer",
+    outline: "none",
+  },
+  deleteBtn: {
+    width: "28px",
+    height: "28px",
+    borderRadius: "50%",
+    border: "none",
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    color: "var(--error-color)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    transition: "all 0.2s",
+  }
 };
 
 export default Attendance;

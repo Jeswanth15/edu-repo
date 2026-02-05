@@ -1,6 +1,5 @@
+// src/components/Syllabus.js
 import React, { useEffect, useState } from "react";
-import Sidebar from "./Sidebar";
-import Navbar from "./Navbar";
 import {
   getAllClassSubjects,
   getSyllabusByClassSubject,
@@ -8,6 +7,10 @@ import {
   deleteSyllabus,
 } from "../utils/api";
 import { getDecodedToken } from "../utils/authHelper";
+import {
+  FaFileUpload, FaBook, FaTrash, FaExternalLinkAlt, FaClock,
+  FaFilePdf, FaFilePowerpoint, FaFileWord, FaLink, FaFolderOpen
+} from "react-icons/fa";
 
 const Syllabus = () => {
   const decoded = getDecodedToken();
@@ -18,6 +21,7 @@ const Syllabus = () => {
   const [classSubjects, setClassSubjects] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [syllabusList, setSyllabusList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -32,6 +36,7 @@ const Syllabus = () => {
 
   const fetchClassSubjects = async () => {
     try {
+      setLoading(true);
       const res = await getAllClassSubjects();
       let all = res.data || [];
 
@@ -44,6 +49,8 @@ const Syllabus = () => {
       setClassSubjects(all);
     } catch (err) {
       console.error("Error fetching class-subjects:", err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -70,10 +77,6 @@ const Syllabus = () => {
 
     if (file) {
       data.append("file", file);
-    } else if (formData.fileLink) {
-      // If no file but link is provided, we can still send it if backend supports it, 
-      // but the current backend expects a file or uses existing link.
-      // For now, let's just use file upload for "my device" requirement.
     }
 
     try {
@@ -81,7 +84,6 @@ const Syllabus = () => {
       fetchSyllabus(selectedId);
       setFormData({ title: "", description: "", moduleName: "", fileLink: "" });
       setFile(null);
-      // Reset file input manually
       const fileInput = document.getElementById("syllabus-file-input");
       if (fileInput) fileInput.value = "";
     } catch (err) {
@@ -100,7 +102,6 @@ const Syllabus = () => {
     }
   };
 
-  // Group syllabus by modules
   const groupedSyllabus = syllabusList.reduce((acc, current) => {
     const module = current.moduleName || "General Resources";
     if (!acc[module]) acc[module] = [];
@@ -109,13 +110,12 @@ const Syllabus = () => {
   }, {});
 
   const getFileIcon = (url) => {
-    if (!url) return "📄";
+    if (!url) return <FaLink />;
     const lowerUrl = url.toLowerCase();
-    if (lowerUrl.endsWith(".pdf")) return "📕";
-    if (lowerUrl.endsWith(".ppt") || lowerUrl.endsWith(".pptx")) return "📙";
-    if (lowerUrl.endsWith(".doc") || lowerUrl.endsWith(".docx")) return "📘";
-    if (lowerUrl.includes("drive.google.com")) return "📁";
-    return "🔗";
+    if (lowerUrl.endsWith(".pdf")) return <FaFilePdf style={{ color: "#ef4444" }} />;
+    if (lowerUrl.endsWith(".ppt") || lowerUrl.endsWith(".pptx")) return <FaFilePowerpoint style={{ color: "#f59e0b" }} />;
+    if (lowerUrl.endsWith(".doc") || lowerUrl.endsWith(".docx")) return <FaFileWord style={{ color: "#3b82f6" }} />;
+    return <FaLink style={{ color: "var(--accent-color)" }} />;
   };
 
   const getFullFileUrl = (url) => {
@@ -124,273 +124,347 @@ const Syllabus = () => {
     return `http://localhost:8080${url}`;
   };
 
+  if (loading && classSubjects.length === 0) {
+    return (
+      <div style={styles.loaderContainer}>
+        <div className="spinner"></div>
+        <p style={{ marginTop: "20px", color: "var(--text-secondary)", fontWeight: "500" }}>
+          Indexing curriculum resources...
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="page-layout">
-      <Sidebar />
-
-      <div className="content-area">
-        <Navbar />
-
-        <div className="content-wrapper">
-          <div className="classroom-header">
-            <h2 className="page-title">Syllabus & Resources</h2>
-            <p className="subtitle">Course materials and modules for your classes</p>
-          </div>
-
-          {/* CLASS-SUBJECT SELECT */}
-          <div className="class-selector">
-            {classSubjects.length === 0 ? (
-              <p className="empty-text">No classes assigned.</p>
-            ) : (
-              <div className="chip-container">
-                {classSubjects.map((cs) => (
-                  <button
-                    key={cs.id}
-                    className={`classroom-chip ${selectedId === cs.id ? "active" : ""}`}
-                    onClick={() => fetchSyllabus(cs.id)}
-                  >
-                    <span className="room-icon">🏫</span>
-                    <div className="room-info">
-                      <strong>{cs.classroomName || cs.classroom?.name}</strong>
-                      <span>{cs.subjectName || cs.subject?.name}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* UPLOAD FORM - Classroom Style Fab/Modal or collapsing section */}
-          {selectedId && role !== "STUDENT" && (
-            <div className="card upload-section">
-              <div className="card-header">
-                <h3>Add Material</h3>
-                <span className="info-badge">Teacher Mode</span>
-              </div>
-
-              <form onSubmit={handleSubmit} className="classroom-form">
-                <div className="form-row">
-                  <input
-                    type="text"
-                    placeholder="Module / Topic Name (e.g. Unit 1: Introduction)"
-                    value={formData.moduleName}
-                    onChange={(e) => setFormData({ ...formData, moduleName: e.target.value })}
-                    className="classroom-input full-width"
-                  />
-                </div>
-                <div className="form-row">
-                  <input
-                    type="text"
-                    placeholder="Material Title"
-                    value={formData.title}
-                    required
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="classroom-input"
-                  />
-                  <div className="file-upload-wrapper">
-                    <input
-                      type="file"
-                      id="syllabus-file-input"
-                      onChange={(e) => setFile(e.target.files[0])}
-                      className="classroom-file-input"
-                      accept=".pdf,.ppt,.pptx,.doc,.docx"
-                    />
-                    <label htmlFor="syllabus-file-input" className="file-input-label">
-                      {file ? `📄 ${file.name}` : "📁 Upload File (PDF/PPT)"}
-                    </label>
-                  </div>
-                </div>
-                <div className="form-row">
-                  <textarea
-                    placeholder="Add a description or instructions..."
-                    value={formData.description}
-                    required
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="classroom-textarea"
-                  />
-                </div>
-                <div className="form-actions">
-                  <button type="submit" className="classroom-btn primary">
-                    Post Material
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-
-          {/* SYLLABUS LIST - Grouped by Module */}
-          <div className="stream-container">
-            {Object.keys(groupedSyllabus).length > 0 ? (
-              Object.keys(groupedSyllabus).map((module) => (
-                <div key={module} className="module-group">
-                  <div className="module-header">
-                    <h4>{module}</h4>
-                    <span className="item-count">{groupedSyllabus[module].length} items</span>
-                  </div>
-                  <div className="module-items">
-                    {groupedSyllabus[module].map((s) => (
-                      <div key={s.syllabusId} className="classroom-item">
-                        <div className="item-icon-circle">
-                          {getFileIcon(s.fileLink)}
-                        </div>
-                        <div className="item-content">
-                          <div className="item-main">
-                            <strong className="item-title">{s.title}</strong>
-                            <span className="item-date">
-                              {new Date(s.uploadedAt).toLocaleDateString(undefined, {
-                                month: "short",
-                                day: "numeric",
-                              })}
-                            </span>
-                          </div>
-                          <p className="item-description">{s.description}</p>
-                          <div className="item-attachment">
-                            <a href={getFullFileUrl(s.fileLink)} target="_blank" rel="noreferrer" className="attachment-pill">
-                              <span className="pill-icon">📎</span>
-                              View Attachment
-                            </a>
-                          </div>
-                        </div>
-                        {role !== "STUDENT" && (
-                          <button
-                            className="item-delete-btn"
-                            onClick={() => handleDelete(s.syllabusId)}
-                            title="Delete material"
-                          >
-                            ×
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))
-            ) : (
-              selectedId && <div className="empty-state">
-                <div className="empty-icon">📂</div>
-                <p>No materials have been posted yet for this class.</p>
-              </div>
-            )}
-          </div>
-        </div>
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1 style={styles.title}>Syllabus & Resources</h1>
+        <p style={styles.subtitle}>Curated learning materials for your active classes</p>
       </div>
 
-      <style>{`
-        .page-layout { display: flex; background: #f8f9fa; min-height: 100vh; }
-        .content-area { flex: 1; }
-        .content-wrapper { padding: 30px; max-width: 1000px; margin: auto; }
+      {/* CLASS SELECTOR */}
+      <div style={styles.selectorWrapper}>
+        {classSubjects.length === 0 ? (
+          <div className="premium-card" style={styles.empty}>No classes assigned to you.</div>
+        ) : (
+          <div style={styles.chipGrid}>
+            {classSubjects.map((cs) => (
+              <div
+                key={cs.id}
+                style={{
+                  ...styles.chip,
+                  borderColor: selectedId === cs.id ? "var(--primary-color)" : "var(--border-color)",
+                  backgroundColor: selectedId === cs.id ? "rgba(30, 136, 229, 0.05)" : "var(--surface-color)",
+                }}
+                onClick={() => fetchSyllabus(cs.id)}
+              >
+                <div style={styles.chipIcon}><FaBook /></div>
+                <div style={styles.chipText}>
+                  <div style={{ fontWeight: "700", color: selectedId === cs.id ? "var(--primary-color)" : "var(--text-primary)" }}>
+                    {cs.classroomName || cs.classroom?.name}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "var(--text-muted)" }}>
+                    {cs.subjectName || cs.subject?.name}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-        .classroom-header { margin-bottom: 30px; border-bottom: 1px solid #e0e0e0; padding-bottom: 15px; }
-        .page-title { font-size: 32px; color: #1a73e8; margin-bottom: 5px; font-weight: 500; }
-        .subtitle { color: #5f6368; font-size: 16px; }
+      <div style={styles.mainGrid}>
+        {/* UPLOAD FORM (TEACHER/ADMIN ONLY) */}
+        {selectedId && role !== "STUDENT" && (
+          <div className="premium-card" style={styles.formCard}>
+            <h3 style={styles.sectionTitle}><FaFileUpload size={14} /> Add New Material</h3>
+            <form onSubmit={handleSubmit} style={styles.form}>
+              <div style={styles.formRow}>
+                <input
+                  className="modern-input"
+                  placeholder="Module Name (e.g. Unit 1: Physics Intro)"
+                  value={formData.moduleName}
+                  onChange={(e) => setFormData({ ...formData, moduleName: e.target.value })}
+                />
+                <input
+                  className="modern-input"
+                  placeholder="Resource Title"
+                  value={formData.title}
+                  required
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                />
+              </div>
+              <textarea
+                className="modern-input"
+                placeholder="Instructions or description for students..."
+                rows={3}
+                style={{ resize: "none" }}
+                value={formData.description}
+                required
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              />
+              <div style={styles.formFooter}>
+                <div style={styles.fileUpload}>
+                  <input
+                    type="file"
+                    id="syllabus-file-input"
+                    style={{ display: "none" }}
+                    onChange={(e) => setFile(e.target.files[0])}
+                    accept=".pdf,.ppt,.pptx,.doc,.docx"
+                  />
+                  <label htmlFor="syllabus-file-input" className="modern-btn btn-outline" style={{ margin: 0, cursor: "pointer" }}>
+                    {file ? `Selected: ${file.name.substring(0, 15)}...` : "Choose File (PDF/PPT)"}
+                  </label>
+                </div>
+                <button type="submit" className="modern-btn btn-primary">
+                  Upload & Post
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
-        /* Class Selector */
-        .class-selector { margin-bottom: 30px; }
-        .chip-container { display: flex; flex-wrap: wrap; gap: 15px; }
-        .classroom-chip { 
-          display: flex; align-items: center; gap: 12px; padding: 12px 20px; 
-          border-radius: 8px; border: 1px solid #dadce0; background: white;
-          cursor: pointer; transition: all 0.2s; text-align: left;
-        }
-        .classroom-chip:hover { background: #f1f3f4; }
-        .classroom-chip.active { border-color: #1a73e8; background: #e8f0fe; color: #1a73e8; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .room-icon { font-size: 24px; }
-        .room-info strong { display: block; font-size: 15px; }
-        .room-info span { font-size: 13px; color: #5f6368; }
-        .active .room-info span { color: #1967d2; }
-
-        /* Upload Section */
-        .upload-section { 
-          background: white; border-radius: 8px; border: 1px solid #dadce0; 
-          padding: 24px; margin-bottom: 40px; box-shadow: 0 1px 2px 0 rgba(60,64,67,0.302), 0 1px 3px 1px rgba(60,64,67,0.149);
-        }
-        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .card-header h3 { font-size: 18px; color: #3c4043; font-weight: 500; }
-        .info-badge { background: #e8f0fe; color: #1967d2; font-size: 12px; padding: 4px 12px; border-radius: 16px; font-weight: 500; }
-
-        .classroom-form { display: flex; flex-direction: column; gap: 15px; }
-        .form-row { display: flex; gap: 15px; }
-        .classroom-input { 
-          flex: 1; padding: 12px 16px; border-radius: 4px; border: 1px solid #dadce0; 
-          background: #f1f3f4; font-size: 15px; transition: border 0.2s;
-        }
-        .classroom-input:focus { outline: none; border-bottom: 2px solid #1a73e8; background: #fff; }
-        .full-width { width: 100%; }
-
-        .file-upload-wrapper { flex: 1; position: relative; }
-        .classroom-file-input { width: 0.1px; height: 0.1px; opacity: 0; overflow: hidden; position: absolute; z-index: -1; }
-        .file-input-label {
-          display: block; padding: 12px 16px; border-radius: 4px; border: 1px dashed #dadce0;
-          background: #f8f9fa; color: #5f6368; cursor: pointer; text-align: center;
-          transition: all 0.2s; font-size: 14px;
-        }
-        .file-input-label:hover { background: #e8f0fe; border-color: #1a73e8; color: #1a73e8; }
-
-        .classroom-textarea { 
-          width: 100%; min-height: 100px; padding: 12px 16px; border-radius: 4px; 
-          border: 1px solid #dadce0; background: #f1f3f4; font-size: 15px; resize: vertical;
-        }
-        .classroom-textarea:focus { outline: none; border-bottom: 2px solid #1a73e8; background: #fff; }
-        .form-actions { display: flex; justify-content: flex-end; }
-        .classroom-btn { 
-          padding: 10px 24px; border-radius: 4px; font-weight: 500; cursor: pointer; border: none; transition: background 0.2s;
-        }
-        .classroom-btn.primary { background: #1a73e8; color: white; }
-        .classroom-btn.primary:hover { background: #185abc; box-shadow: 0 1px 2px 0 rgba(66,133,244,0.3), 0 1px 3px 1px rgba(66,133,244,0.15); }
-
-        /* Stream / Module View */
-        .module-group { margin-bottom: 35px; }
-        .module-header { 
-          display: flex; align-items: baseline; gap: 15px; 
-          border-bottom: 1px solid #1a73e8; margin-bottom: 15px; padding-bottom: 8px;
-        }
-        .module-header h4 { font-size: 20px; color: #1a73e8; font-weight: 400; margin: 0; }
-        .item-count { font-size: 13px; color: #70757a; }
-
-        .module-items { display: flex; flex-direction: column; gap: 12px; }
-        .classroom-item { 
-          display: flex; gap: 16px; padding: 16px; background: white; 
-          border: 1px solid #dadce0; border-radius: 8px; transition: box-shadow 0.2s;
-          position: relative;
-        }
-        .classroom-item:hover { box-shadow: 0 1px 2px 0 rgba(60,64,67,0.302), 0 1px 3px 1px rgba(60,64,67,0.149); }
-        
-        .item-icon-circle { 
-          width: 40px; height: 40px; border-radius: 50%; background: #e8f0fe; 
-          display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0;
-        }
-        .item-content { flex: 1; }
-        .item-main { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
-        .item-title { font-size: 16px; color: #3c4043; font-weight: 500; }
-        .item-date { font-size: 12px; color: #70757a; }
-        .item-description { font-size: 14px; color: #5f6368; margin-bottom: 12px; white-space: pre-wrap; }
-        
-        .attachment-pill { 
-          display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; 
-          border: 1px solid #dadce0; border-radius: 4px; font-size: 13px; color: #3c4043; 
-          text-decoration: none; transition: background 0.2s;
-        }
-        .attachment-pill:hover { background: #f8f9fa; border-color: #bdc1c6; }
-        .pill-icon { color: #5f6368; }
-
-        .item-delete-btn { 
-          position: absolute; top: 12px; right: 12px; background: none; border: none; 
-          font-size: 20px; color: #dadce0; cursor: pointer; line-height: 1; transition: color 0.1s;
-        }
-        .item-delete-btn:hover { color: #d93025; }
-
-        .empty-state { text-align: center; padding: 60px 20px; color: #70757a; }
-        .empty-icon { font-size: 48px; margin-bottom: 15px; opacity: 0.5; }
-
-        @media (max-width: 600px) {
-          .form-row { flex-direction: column; }
-          .content-wrapper { padding: 15px; }
-          .classroom-item { flex-direction: row; }
-          .item-main { flex-direction: column; }
-        }
-      `}</style>
+        {/* MATERIALS LIST */}
+        <div style={styles.materialsList}>
+          {Object.keys(groupedSyllabus).length > 0 ? (
+            Object.keys(groupedSyllabus).map((module) => (
+              <div key={module} style={styles.moduleSection}>
+                <div style={styles.moduleHeader}>
+                  <FaFolderOpen />
+                  <span>{module}</span>
+                </div>
+                <div style={styles.itemsGrid}>
+                  {groupedSyllabus[module].map((s) => (
+                    <div key={s.syllabusId} className="premium-card" style={styles.itemCard}>
+                      <div style={styles.itemTag}>
+                        <div style={styles.fileIcon}>{getFileIcon(s.fileLink)}</div>
+                      </div>
+                      <div style={styles.itemContent}>
+                        <div style={styles.itemTop}>
+                          <h4 style={styles.itemTitle}>{s.title}</h4>
+                          {role !== "STUDENT" && (
+                            <button
+                              style={styles.deleteBtn}
+                              onClick={() => handleDelete(s.syllabusId)}
+                            >
+                              <FaTrash size={12} />
+                            </button>
+                          )}
+                        </div>
+                        <p style={styles.itemDesc}>{s.description}</p>
+                        <div style={styles.itemFooter}>
+                          <a href={getFullFileUrl(s.fileLink)} target="_blank" rel="noreferrer" style={styles.downloadLink}>
+                            <FaExternalLinkAlt size={10} /> View Material
+                          </a>
+                          <div style={styles.itemDate}>
+                            <FaClock size={10} /> {new Date(s.uploadedAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          ) : (
+            selectedId && (
+              <div className="premium-card" style={styles.empty}>
+                <FaFolderOpen size={30} style={{ opacity: 0.3, marginBottom: "12px" }} />
+                <p>No materials posted for this class yet.</p>
+              </div>
+            )
+          )}
+        </div>
+      </div>
     </div>
   );
+};
+
+const styles = {
+  container: {
+    maxWidth: "1000px",
+    margin: "0 auto",
+  },
+  header: {
+    marginBottom: "32px",
+  },
+  title: {
+    fontSize: "28px",
+    fontWeight: "700",
+    marginBottom: "4px",
+  },
+  subtitle: {
+    color: "var(--text-muted)",
+    fontSize: "14px",
+  },
+  selectorWrapper: {
+    marginBottom: "32px",
+  },
+  chipGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+    gap: "12px",
+  },
+  chip: {
+    padding: "12px 16px",
+    borderRadius: "var(--radius-md)",
+    border: "1px solid var(--border-color)",
+    cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    transition: "all 0.2s",
+  },
+  chipIcon: {
+    width: "32px",
+    height: "32px",
+    borderRadius: "50%",
+    backgroundColor: "rgba(0,0,0,0.03)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "var(--text-muted)",
+    fontSize: "14px",
+  },
+  chipText: {
+    flex: 1,
+  },
+  mainGrid: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "32px",
+  },
+  sectionTitle: {
+    fontSize: "18px",
+    marginBottom: "20px",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    borderBottom: "1px solid var(--border-color)",
+    paddingBottom: "12px",
+  },
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+  },
+  formRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "16px",
+  },
+  formFooter: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  moduleSection: {
+    marginBottom: "32px",
+  },
+  moduleHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    fontSize: "16px",
+    fontWeight: "700",
+    color: "var(--primary-color)",
+    marginBottom: "16px",
+    paddingBottom: "8px",
+    borderBottom: "2px solid rgba(30, 136, 229, 0.1)",
+  },
+  itemsGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr",
+    gap: "16px",
+  },
+  itemCard: {
+    padding: "0",
+    display: "flex",
+    border: "1px solid var(--border-color)",
+    boxShadow: "none",
+    overflow: "hidden",
+  },
+  itemTag: {
+    width: "60px",
+    backgroundColor: "rgba(0,0,0,0.02)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRight: "1px solid var(--border-color)",
+  },
+  fileIcon: {
+    fontSize: "24px",
+  },
+  itemContent: {
+    flex: 1,
+    padding: "16px 20px",
+  },
+  itemTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: "8px",
+  },
+  itemTitle: {
+    margin: 0,
+    fontSize: "16px",
+    fontWeight: "600",
+  },
+  deleteBtn: {
+    background: "none",
+    border: "none",
+    color: "var(--text-muted)",
+    cursor: "pointer",
+    padding: "4px",
+    borderRadius: "4px",
+  },
+  itemDesc: {
+    fontSize: "14px",
+    color: "var(--text-secondary)",
+    lineHeight: "1.5",
+    marginBottom: "16px",
+  },
+  itemFooter: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  downloadLink: {
+    fontSize: "13px",
+    fontWeight: "700",
+    color: "var(--primary-color)",
+    textDecoration: "none",
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+  },
+  itemDate: {
+    fontSize: "12px",
+    color: "var(--text-muted)",
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+  },
+  empty: {
+    textAlign: "center",
+    padding: "40px",
+    color: "var(--text-muted)",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+  },
+  loading: {
+    textAlign: "center",
+    padding: "40px",
+    color: "var(--text-muted)",
+  },
+  loaderContainer: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: "60vh",
+  },
 };
 
 export default Syllabus;

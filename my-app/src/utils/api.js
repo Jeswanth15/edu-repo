@@ -36,6 +36,9 @@ export const rejectUser = (userId, adminSchoolId) =>
 export const deleteUser = (userId) =>
   axios.delete(`${API_BASE}/api/users/${userId}`, config());
 
+export const getUserById = (userId) =>
+  axios.get(`${API_BASE}/api/users/${userId}`, config());
+
 // ---------------- CLASSROOMS ----------------
 export const getAllClassrooms = (schoolId) =>
   axios.get(`${API_BASE}/api/classrooms?schoolId=${schoolId}`, config());
@@ -189,22 +192,24 @@ export const getSubmissionsByStudent = (studentId) =>
   axios.get(`${API_BASE}/api/submissions/student/${studentId}`, config());
 
 // ---------------- SUBMISSIONS ----------------
-export const uploadSubmission = (formData) =>
+export const createSubmission = (formData) =>
   axios.post(`${API_BASE}/api/submissions`, formData, config());
 
-
-export const gradeSubmission = (submissionId, grade) =>
-  axios.put(
-    `${API_BASE}/api/submissions/grade/${submissionId}?grade=${grade}`,
-    {},
-    config()
-  );
-
-export const getSubmissionsByAssignmentAndStudent = (assignmentId, studentId) =>
+export const getStudentSubmissions = (assignmentId, studentId) =>
   axios.get(
     `${API_BASE}/api/submissions/assignment/${assignmentId}/student/${studentId}`,
     config()
   );
+
+export const updateGradeAndFeedback = (submissionId, grade, feedback) =>
+  axios.put(
+    `${API_BASE}/api/submissions/grade-feedback/${submissionId}?grade=${grade}&feedback=${feedback}`,
+    null,
+    config()
+  );
+
+
+
 
 // ---------------- ANNOUNCEMENTS ----------------
 export const getAllAnnouncements = () =>

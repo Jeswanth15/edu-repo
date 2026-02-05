@@ -1,140 +1,180 @@
 import React, { useState } from "react";
-import { FaBars } from "react-icons/fa";
-import { Link } from "react-router-dom";
-import { getDecodedToken } from "../utils/authHelper";
+import { FaBars, FaSignOutAlt, FaUser } from "react-icons/fa";
+import { Link, useLocation } from "react-router-dom";
+import { getDecodedToken, logout } from "../utils/authHelper";
 
 const Sidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const decoded = getDecodedToken();
+  const location = useLocation();
 
   const userRole = decoded?.role;
-  const schoolName = decoded?.schoolName || "School Portal";
+  const schoolName = decoded?.schoolName || "EduPortal";
 
   const toggleSidebar = () => setIsOpen(!isOpen);
-
   const closeSidebar = () => setIsOpen(false);
 
-  const linkStyle = {
-    color: "white",
+  const isActive = (path) => location.pathname === path;
+
+  const linkStyle = (path) => ({
+    color: isActive(path) ? "white" : "rgba(255, 255, 255, 0.7)",
     textDecoration: "none",
-    display: "block",
-    padding: "10px",
-    background: "#0c508a",
-    borderRadius: "6px",
-    textAlign: "center",
+    display: "flex",
+    alignItems: "center",
+    padding: "12px 18px",
+    background: isActive(path) ? "rgba(255, 255, 255, 0.1)" : "transparent",
+    borderRadius: "var(--radius-md)",
     fontSize: "14px",
-    cursor: "pointer",
-  };
+    fontWeight: isActive(path) ? "600" : "400",
+    transition: "var(--transition-fast)",
+    marginBottom: "4px",
+  });
 
   return (
     <>
-      {/* Toggle button always visible */}
+      {/* Toggle button */}
       <button
         onClick={toggleSidebar}
         style={{
           position: "fixed",
-          top: 10,
-          left: 10,
+          top: 18,
+          left: 20,
           zIndex: 2000,
-          backgroundColor: "#0a4275",
-          color: "white",
+          backgroundColor: "transparent",
+          color: isOpen ? "white" : "var(--primary-color)",
           border: "none",
-          padding: "8px",
-          borderRadius: "5px",
           cursor: "pointer",
+          transition: "0.3s",
         }}
       >
         <FaBars size={22} />
       </button>
+
+      {/* Overlay */}
+      {isOpen && (
+        <div
+          onClick={closeSidebar}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0, 0, 0, 0.3)",
+            backdropFilter: "blur(4px)",
+            zIndex: 1400,
+          }}
+        />
+      )}
 
       {/* Sidebar */}
       <div
         style={{
           position: "fixed",
           top: 0,
-          left: isOpen ? 0 : "-270px",
-          width: "270px",
+          left: isOpen ? 0 : "-280px",
+          width: "280px",
           height: "100%",
-          backgroundColor: "#0a4275",
+          backgroundColor: "var(--primary-color)",
           color: "white",
-          transition: "0.3s",
-          paddingTop: "60px",
+          transition: "cubic-bezier(0.4, 0, 0.2, 1) 0.3s",
+          paddingTop: "80px",
           zIndex: 1500,
           overflowY: "auto",
+          boxShadow: "10px 0 30px rgba(0,0,0,0.1)",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
-        <div
-          style={{
-            textAlign: "center",
-            marginBottom: "25px",
-            fontWeight: "bold",
-            fontSize: "18px",
-          }}
-        >
-          {schoolName}
+        <div style={{ padding: "0 25px 30px 25px" }}>
+          <h2 style={{ fontSize: "12px", textTransform: "uppercase", letterSpacing: "2px", opacity: 0.5, marginBottom: "8px" }}>Organization</h2>
+          <h3 style={{ color: "white", fontSize: "18px", margin: 0 }}>{schoolName}</h3>
         </div>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(3, 1fr)",
-            gap: "12px",
-            padding: "20px",
-          }}
-        >
-
-          {/* COMMON */}
-          <Link to="/" style={linkStyle} onClick={closeSidebar}>Dashboard</Link>
+        <div style={{ flex: 1, padding: "0 15px" }}>
+          <h2 style={styles.sectionTitle}>Main Menu</h2>
+          <Link to="/" style={linkStyle("/")} onClick={closeSidebar}>Dashboard</Link>
+          <Link to="/profile" style={linkStyle("/profile")} onClick={closeSidebar}><FaUser style={{ marginRight: 10 }} /> Profile</Link>
 
           {/* SCHOOL ADMIN */}
           {userRole === "SCHOOLADMIN" && (
             <>
-              <Link to="/schooladmin/pending-users" style={linkStyle} onClick={closeSidebar}>Users</Link>
-              <Link to="/schooladmin/classrooms" style={linkStyle} onClick={closeSidebar}>Classrooms</Link>
-              <Link to="/schooladmin/assign-subject" style={linkStyle} onClick={closeSidebar}>Assign Subjects</Link>
-              <Link to="/schooladmin/subjects" style={linkStyle} onClick={closeSidebar}>Subjects</Link>
-              <Link to="/schooladmin/enrollments" style={linkStyle} onClick={closeSidebar}>Enrollments</Link>
-              <Link to="/schooladmin/timetables" style={linkStyle} onClick={closeSidebar}>Timetables</Link>
-              <Link to="/schooladmin/calendar" style={linkStyle} onClick={closeSidebar}>Calendar</Link>
-              <Link to="/schooladmin/syllabus" style={linkStyle} onClick={closeSidebar}>Syllabus</Link>
-              <Link to="/schooladmin/teaching-logs" style={linkStyle} onClick={closeSidebar}>Logs</Link>
-              <Link to="/schooladmin/attendance" style={linkStyle} onClick={closeSidebar}>Attendance</Link>
-              <Link to="/schooladmin/assignments" style={linkStyle} onClick={closeSidebar}>Assignments</Link>
-              <Link to="/schooladmin/exams" style={linkStyle} onClick={closeSidebar}>Exams</Link>
-              <Link to="/schooladmin/marks" style={linkStyle} onClick={closeSidebar}>Marks</Link>
+              <h2 style={styles.sectionTitle}>Management</h2>
+              <Link to="/schooladmin/pending-users" style={linkStyle("/schooladmin/pending-users")} onClick={closeSidebar}>User Approvals</Link>
+              <Link to="/schooladmin/classrooms" style={linkStyle("/schooladmin/classrooms")} onClick={closeSidebar}>Classrooms</Link>
+              <Link to="/schooladmin/subjects" style={linkStyle("/schooladmin/subjects")} onClick={closeSidebar}>Subjects Catalog</Link>
+              <Link to="/schooladmin/assign-subject" style={linkStyle("/schooladmin/assign-subject")} onClick={closeSidebar}>Teaching Assignments</Link>
+              <Link to="/schooladmin/enrollments" style={linkStyle("/schooladmin/enrollments")} onClick={closeSidebar}>Student Enrollments</Link>
+
+              <h2 style={styles.sectionTitle}>Academics</h2>
+              <Link to="/schooladmin/timetables" style={linkStyle("/schooladmin/timetables")} onClick={closeSidebar}>Master Timetable</Link>
+              <Link to="/schooladmin/calendar" style={linkStyle("/schooladmin/calendar")} onClick={closeSidebar}>School Calendar</Link>
+              <Link to="/schooladmin/syllabus" style={linkStyle("/schooladmin/syllabus")} onClick={closeSidebar}>Syllabus Hub</Link>
+              <Link to="/schooladmin/exams" style={linkStyle("/schooladmin/exams")} onClick={closeSidebar}>Exam Schedules</Link>
+              <Link to="/schooladmin/marks" style={linkStyle("/schooladmin/marks")} onClick={closeSidebar}>Marks Register</Link>
             </>
           )}
 
           {/* TEACHER */}
           {userRole === "TEACHER" && (
             <>
-              <Link to="/teacher" style={linkStyle} onClick={closeSidebar}>Dashboard</Link>
-              <Link to="/teacher/exams" style={linkStyle} onClick={closeSidebar}>Exams</Link>
-              <Link to="/teacher/marks" style={linkStyle} onClick={closeSidebar}>Marks</Link>
-              <Link to="/teacher/attendance" style={linkStyle} onClick={closeSidebar}>Attendance</Link>
-              <Link to="/teacher/assignments" style={linkStyle} onClick={closeSidebar}>Assignments</Link>
-              <Link to="/teacher/syllabus" style={linkStyle} onClick={closeSidebar}>Syllabus</Link>
-              <Link to="/teacher/teaching-logs" style={linkStyle} onClick={closeSidebar}>Logs</Link>
+              <h2 style={styles.sectionTitle}>Teaching</h2>
+              <Link to="/teacher/attendance" style={linkStyle("/teacher/attendance")} onClick={closeSidebar}>Attendance</Link>
+              <Link to="/teacher/assignments" style={linkStyle("/teacher/assignments")} onClick={closeSidebar}>Assignments</Link>
+              <Link to="/teacher/syllabus" style={linkStyle("/teacher/syllabus")} onClick={closeSidebar}>Syllabus</Link>
+              <Link to="/teacher/teaching-logs" style={linkStyle("/teacher/teaching-logs")} onClick={closeSidebar}>Teaching Logs</Link>
+              <Link to="/teacher/exams" style={linkStyle("/teacher/exams")} onClick={closeSidebar}>Exams</Link>
+              <Link to="/teacher/marks" style={linkStyle("/teacher/marks")} onClick={closeSidebar}>Marks Entry</Link>
             </>
           )}
 
           {/* STUDENT */}
           {userRole === "STUDENT" && (
             <>
-              <Link to="/student" style={linkStyle} onClick={closeSidebar}>Dashboard</Link>
-              <Link to="/student/timetable" style={linkStyle} onClick={closeSidebar}>Timetable</Link>
-              <Link to="/student/exams" style={linkStyle} onClick={closeSidebar}>Exams</Link>
-              <Link to="/student/marks" style={linkStyle} onClick={closeSidebar}>Marks</Link>
-              <Link to="/student/assignments" style={linkStyle} onClick={closeSidebar}>Assignments</Link>
-              <Link to="/student/attendance" style={linkStyle} onClick={closeSidebar}>Attendance</Link>
-              <Link to="/student/syllabus" style={linkStyle} onClick={closeSidebar}>Syllabus</Link>
+              <h2 style={styles.sectionTitle}>My Learning</h2>
+              <Link to="/student/timetable" style={linkStyle("/student/timetable")} onClick={closeSidebar}>My Timetable</Link>
+              <Link to="/student/exams" style={linkStyle("/student/exams")} onClick={closeSidebar}>My Exams</Link>
+              <Link to="/student/marks" style={linkStyle("/student/marks")} onClick={closeSidebar}>My Marks</Link>
+              <Link to="/student/assignments" style={linkStyle("/student/assignments")} onClick={closeSidebar}>My Assignments</Link>
+              <Link to="/student/attendance" style={linkStyle("/student/attendance")} onClick={closeSidebar}>My Attendance</Link>
+              <Link to="/student/syllabus" style={linkStyle("/student/syllabus")} onClick={closeSidebar}>View Syllabus</Link>
             </>
           )}
+        </div>
 
+        <div style={{ padding: "20px 15px", borderTop: "1px solid rgba(255,255,255,0.1)" }}>
+          <button
+            onClick={logout}
+            style={styles.logoutBtn}
+          >
+            <FaSignOutAlt style={{ marginRight: 10 }} /> Sign Out
+          </button>
         </div>
       </div>
     </>
   );
+};
+
+const styles = {
+  sectionTitle: {
+    fontSize: "11px",
+    textTransform: "uppercase",
+    letterSpacing: "1.5px",
+    color: "rgba(255, 255, 255, 0.4)",
+    margin: "24px 18px 12px 18px",
+    fontWeight: "700",
+  },
+  logoutBtn: {
+    width: "100%",
+    display: "flex",
+    alignItems: "center",
+    padding: "12px 18px",
+    background: "rgba(239, 68, 68, 0.1)",
+    color: "#fca5a5",
+    border: "none",
+    borderRadius: "var(--radius-md)",
+    cursor: "pointer",
+    fontSize: "14px",
+    fontWeight: "600",
+    transition: "var(--transition-fast)",
+  }
 };
 
 export default Sidebar;

@@ -1,7 +1,5 @@
 // src/components/MarksEntryPage.jsx
 import React, { useEffect, useState } from "react";
-import Sidebar from "./Sidebar";
-import Navbar from "./Navbar";
 import {
   getAllExamSchedules,
   getStudentsBySchool,
@@ -12,6 +10,10 @@ import {
   deleteMarks,
 } from "../utils/api";
 import { getDecodedToken } from "../utils/authHelper";
+import {
+  FaDatabase, FaEye, FaEyeSlash, FaEdit, FaSync,
+  FaTrash, FaBook, FaUsers, FaCalendarAlt, FaBuilding
+} from "react-icons/fa";
 
 const MarksEntryPage = () => {
   const decoded = getDecodedToken();
@@ -26,7 +28,6 @@ const MarksEntryPage = () => {
   const [showAllMarks, setShowAllMarks] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // load exams on mount
   useEffect(() => {
     const load = async () => {
       try {
@@ -39,14 +40,12 @@ const MarksEntryPage = () => {
     load();
   }, []);
 
-  // restore last selected exam (optional)
   useEffect(() => {
     if (!exams.length) return;
     const last = localStorage.getItem("selectedExamId");
     if (last) handleExamSelect(last);
   }, [exams]);
 
-  // select exam and load students + existing marks
   const handleExamSelect = async (examId) => {
     if (!examId) {
       setSelectedExam(null);
@@ -64,22 +63,18 @@ const MarksEntryPage = () => {
 
     setLoading(true);
     try {
-      // students of the class
       const studentRes = await getStudentsBySchool(schoolId);
       const classStudents = (studentRes.data || []).filter(
         (s) => s.classroomId === examObj.classroomId && s.approvalStatus === "APPROVED"
       );
 
-      // existing marks for this subject
       const marksRes = await getMarksBySubject(examObj.subjectId);
       const subjectMarks = marksRes.data || [];
 
-      // filter only marks for this examScheduleId (if backend stores examScheduleId)
       const existingMarks = subjectMarks.filter(
         (m) => String(m.examScheduleId) === String(examObj.examScheduleId)
       );
 
-      // build marksData aligned to students
       const initial = classStudents.map((stu) => {
         const found = existingMarks.find((m) => String(m.studentId) === String(stu.userId));
         return {
@@ -95,7 +90,7 @@ const MarksEntryPage = () => {
       setMarksData(initial);
     } catch (err) {
       console.error(err);
-      alert("Failed to load students/marks. See console.");
+      alert("Failed to load students/marks");
     }
     setLoading(false);
   };
@@ -110,15 +105,7 @@ const MarksEntryPage = () => {
 
   const submitMarks = async () => {
     if (!selectedExam) return alert("Select an exam first.");
-    if (!marksData.length) return alert("No students to save marks for.");
-
-    // basic validation: ensure numeric or blank
-    for (const m of marksData) {
-      if (m.marksObtained !== "" && isNaN(Number(m.marksObtained)))
-        return alert(`Marks for ${m.studentName} must be numeric or empty.`);
-      if (m.totalMarks !== "" && isNaN(Number(m.totalMarks)))
-        return alert(`Total marks for ${m.studentName} must be numeric or empty.`);
-    }
+    if (!marksData.length) return alert("No students found.");
 
     setLoading(true);
     try {
@@ -139,11 +126,10 @@ const MarksEntryPage = () => {
 
       await Promise.all(tasks);
       alert("Marks saved successfully!");
-      // refresh local data
       handleExamSelect(selectedExam.examScheduleId);
     } catch (err) {
       console.error(err);
-      alert("Error saving marks. Check console.");
+      alert("Error saving marks");
     }
     setLoading(false);
   };
@@ -168,8 +154,6 @@ const MarksEntryPage = () => {
     setLoading(true);
     try {
       await deleteMarks(marksId);
-      alert("Deleted successfully");
-      // refresh list if open
       if (showAllMarks) {
         const res = await getAllMarks();
         setAllMarks(res.data || []);
@@ -182,242 +166,381 @@ const MarksEntryPage = () => {
     setLoading(false);
   };
 
-  // small helper to show badges
-  const badge = (txt) => <span style={{ background: "#eef6ff", color: "#0a4275", padding: "4px 8px", borderRadius: 6, fontSize: 12 }}>{txt}</span>;
-
   return (
-    <div className="marks-page">
-      <Sidebar />
-      <div className="marks-main">
-        <Navbar />
-        <div className="marks-wrapper">
+    <div style={styles.container}>
+      <div style={styles.header}>
+        <h1 style={styles.title}>Marks & Results Entry</h1>
+        <p style={styles.subtitle}>Enter and manage student performance data</p>
+      </div>
 
-          <header className="marks-header">
-            <h2>Marks Entry</h2>
-            <div className="marks-actions">
-              <button className="small" onClick={loadAllMarks} disabled={loading}>
-                {loading ? "Loading..." : "Get All Marks"}
-              </button>
-              <button
-                className="small secondary"
-                onClick={() => {
-                  setShowAllMarks((s) => !s);
-                  if (!showAllMarks && !allMarks.length) loadAllMarks();
-                }}
-              >
-                {showAllMarks ? "Hide All" : "Show All"}
-              </button>
-            </div>
-          </header>
-
-          {/* SELECT EXAM */}
-          <section className="card select-card">
-            <label style={{ fontWeight: 600 }}>Select Exam</label>
-            <select
-              value={selectedExam?.examScheduleId || ""}
-              onChange={(e) => handleExamSelect(e.target.value)}
-              className="full-input"
-            >
-              <option value="">-- Select Exam --</option>
-              {exams.map((ex) => (
-                <option key={ex.examScheduleId} value={ex.examScheduleId}>
-                  {ex.subjectName} • {ex.classroomName} • {ex.examDate}
-                </option>
-              ))}
-            </select>
-
-            {selectedExam && (
-              <div style={{ marginTop: 10, display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-                {badge(selectedExam.subjectName)}
-                {badge(selectedExam.classroomName)}
-                {badge(selectedExam.examDate)}
-                {selectedExam.roomNo && <span style={{ fontSize: 13, color: "#666" }}>Room: {selectedExam.roomNo}</span>}
-              </div>
-            )}
-          </section>
-
-          {/* MARKS TABLE */}
-          {selectedExam && (
-            <section className="card marks-card">
-              <h3>Students — {selectedExam.classroomName} • {selectedExam.subjectName}</h3>
-
-              {loading ? (
-                <div style={{ padding: 20 }}>Loading students/marks…</div>
-              ) : students.length === 0 ? (
-                <div style={{ padding: 20, color: "#666" }}>No students found for this class.</div>
-              ) : (
-                <div className="table-wrap">
-                  <table className="styled-table">
-                    <thead>
-                      <tr>
-                        <th>#</th>
-                        <th>Student</th>
-                        <th style={{ width: 120 }}>Marks</th>
-                        <th style={{ width: 120 }}>Total</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {marksData.map((m, i) => (
-                        <tr key={m.studentId}>
-                          <td style={{ textAlign: "center" }}>{i + 1}</td>
-                          <td>{m.studentName}</td>
-                          <td>
-                            <input
-                              type="number"
-                              value={m.marksObtained}
-                              onChange={(e) => updateMarksState(i, "marksObtained", e.target.value)}
-                              className="small-input"
-                              placeholder="e.g., 45"
-                            />
-                          </td>
-                          <td>
-                            <input
-                              type="number"
-                              value={m.totalMarks}
-                              onChange={(e) => updateMarksState(i, "totalMarks", e.target.value)}
-                              className="small-input"
-                              placeholder="e.g., 50"
-                            />
-                          </td>
-                          
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              <div style={{ display: "flex", gap: 10, marginTop: 16, flexWrap: "wrap" }}>
-                <button className="btn primary" onClick={submitMarks} disabled={loading || !students.length}>
-                  {loading ? "Saving…" : "Save Marks"}
-                </button>
-                <button
-                  className="btn outline"
-                  onClick={() => {
-                    // reset form (keep selected exam)
-                    handleExamSelect(selectedExam.examScheduleId);
-                  }}
-                >
-                  Reset
-                </button>
-              </div>
-            </section>
-          )}
-
-          {/* ALL MARKS PANEL */}
-          {showAllMarks && (
-            <section className="card all-marks-card">
-              <h3>All Marks</h3>
-              {allMarks.length === 0 ? (
-                <div style={{ padding: 12, color: "#666" }}>No marks available.</div>
-              ) : (
-                <div className="table-wrap">
-                  <table className="styled-table">
-                    <thead>
-                      <tr>
-                        <th>ID</th>
-                        <th>Student</th>
-                        <th>Subject</th>
-                        <th>Exam ID</th>
-                        <th>Marks</th>
-                        <th>Total</th>
-                        <th>Date</th>
-                        <th>Action</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {allMarks.map((m) => (
-                        <tr key={m.marksId}>
-                          <td>{m.marksId}</td>
-                          <td>{m.studentName}</td>
-                          <td>{m.subjectName}</td>
-                          <td>{m.examScheduleId}</td>
-                          <td>{m.marksObtained}</td>
-                          <td>{m.totalMarks}</td>
-                          <td>{m.examDate}</td>
-                          <td>
-                            <button className="small red" onClick={() => handleDelete(m.marksId)}>
-                              Delete
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              <div style={{ marginTop: 12 }}>
-                <button className="btn outline" onClick={() => setShowAllMarks(false)}>Close</button>
-              </div>
-            </section>
-          )}
+      <div style={styles.actionHeader}>
+        <div style={styles.badgeGroup}>
+          <button className="modern-btn btn-outline" onClick={loadAllMarks} disabled={loading}>
+            <FaDatabase /> Fetch All Records
+          </button>
+          <button
+            className="modern-btn btn-outline"
+            onClick={() => {
+              setShowAllMarks((s) => !s);
+              if (!showAllMarks && !allMarks.length) loadAllMarks();
+            }}
+          >
+            {showAllMarks ? <FaEyeSlash /> : <FaEye />} {showAllMarks ? "Hide Global Entry" : "Show Global Entry"}
+          </button>
         </div>
       </div>
 
-      {/* Inline styles (component-scoped) */}
-      <style>{`
-        :root {
-          --primary: #0a4275;
-          --accent: #007bff;
-          --success: #28a745;
-          --danger: #dc3545;
-          --surface: #f3f6f9;
-          --card: #fff;
-          --muted: #7a7a7a;
-        }
+      <div style={styles.mainGrid}>
+        <div className="premium-card" style={styles.selectCard}>
+          <h3 style={styles.sectionTitle}><FaEdit size={14} /> Subject Examination</h3>
+          <div style={styles.inputGroup}>
+            <label style={styles.label}>Select Scheduled Exam</label>
+            <select
+              className="modern-input"
+              value={selectedExam?.examScheduleId || ""}
+              onChange={(e) => handleExamSelect(e.target.value)}
+            >
+              <option value="">-- Choose Exam Period --</option>
+              {exams.map((ex) => (
+                <option key={ex.examScheduleId} value={ex.examScheduleId}>
+                  {ex.subjectName} • {ex.classroomName} • {new Date(ex.examDate).toLocaleDateString()}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        .marks-page { display: flex; }
-        .marks-main { flex: 1; background: var(--surface); min-height: 100vh; }
-        .marks-wrapper { max-width: 1100px; margin: 22px auto; padding: 0 18px 60px; }
+          {selectedExam && (
+            <div style={styles.examBadgeGrid}>
+              <div style={styles.examInfoItem}>
+                <FaBook style={styles.infoIcon} />
+                <span>{selectedExam.subjectName}</span>
+              </div>
+              <div style={styles.examInfoItem}>
+                <FaUsers style={styles.infoIcon} />
+                <span>{selectedExam.classroomName}</span>
+              </div>
+              <div style={styles.examInfoItem}>
+                <FaCalendarAlt style={styles.infoIcon} />
+                <span>{new Date(selectedExam.examDate).toLocaleDateString()}</span>
+              </div>
+              {selectedExam.roomNo && (
+                <div style={styles.examInfoItem}>
+                  <FaBuilding style={styles.infoIcon} />
+                  <span>Room {selectedExam.roomNo}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
-        .marks-header { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 18px; }
-        .marks-header h2 { margin: 0; color: var(--primary); }
-        .marks-actions { display: flex; gap: 8px; }
+        {selectedExam && (
+          <div className="premium-card" style={styles.tableCard}>
+            <div style={styles.cardHeader}>
+              <h3 style={styles.tableTitle}>Student Performance List</h3>
+              <div style={styles.headerButtons}>
+                <button className="modern-btn btn-primary" onClick={submitMarks} disabled={loading || !students.length}>
+                  {loading ? "Saving..." : "Commit Marks"}
+                </button>
+                <button className="modern-btn btn-outline" onClick={() => handleExamSelect(selectedExam.examScheduleId)}>
+                  <FaSync />
+                </button>
+              </div>
+            </div>
 
-        .card { background: var(--card); border-radius: 12px; padding: 16px; box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04); }
+            {loading ? (
+              <div style={styles.loading}>Synchronizing records...</div>
+            ) : students.length === 0 ? (
+              <div style={styles.empty}>No approved students found for this classroom.</div>
+            ) : (
+              <div style={styles.tableWrapper}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={styles.th}>#</th>
+                      <th style={styles.th}>Student Name</th>
+                      <th style={styles.th}>Obtained</th>
+                      <th style={styles.th}>Total Base</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {marksData.map((m, i) => (
+                      <tr key={m.studentId} style={styles.tr}>
+                        <td style={styles.tdNum}>{i + 1}</td>
+                        <td style={styles.td}>
+                          <div style={styles.studentCell}>
+                            <div style={styles.avatarMini}>{m.studentName.charAt(0)}</div>
+                            <span style={styles.studentNameText}>{m.studentName}</span>
+                          </div>
+                        </td>
+                        <td style={styles.td}>
+                          <input
+                            type="number"
+                            className="modern-input"
+                            style={styles.marksInput}
+                            value={m.marksObtained}
+                            onChange={(e) => updateMarksState(i, "marksObtained", e.target.value)}
+                            placeholder="Marks"
+                          />
+                        </td>
+                        <td style={styles.td}>
+                          <input
+                            type="number"
+                            className="modern-input"
+                            style={styles.marksInput}
+                            value={m.totalMarks}
+                            onChange={(e) => updateMarksState(i, "totalMarks", e.target.value)}
+                            placeholder="Total"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
 
-        .select-card { margin-bottom: 16px; }
-        .marks-card { margin-bottom: 18px; }
-
-        label { display: block; font-weight: 600; margin-bottom: 6px; color: #222; }
-
-        .full-input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; background: white; }
-
-        .table-wrap { overflow-x: auto; margin-top: 12px; }
-        .styled-table { width: 100%; border-collapse: collapse; min-width: 720px; }
-        .styled-table thead tr { background: #f4f6fb; color: #111; }
-        .styled-table th, .styled-table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #eee; }
-        .styled-table tbody tr:hover { background: #fbfcff; }
-
-        .small-input { width: 90px; padding: 8px; border-radius: 6px; border: 1px solid #ddd; }
-
-        .btn { padding: 10px 14px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; }
-        .btn.primary { background: var(--accent); color: white; }
-        .btn.outline { background: transparent; border: 1px solid #ccc; color: #333; }
-
-        .small { padding: 8px 10px; border-radius: 8px; border: none; background: var(--primary); color: white; cursor: pointer; font-weight: 600; }
-        .small.secondary { background: #5a98d6; }
-        .small.red { background: var(--danger); color: white; padding: 6px 10px; border-radius: 8px; border: none; cursor: pointer; }
-
-        .muted { color: var(--muted); }
-
-        /* responsive */
-        @media (max-width: 980px) {
-          .styled-table { min-width: 680px; }
-        }
-        @media (max-width: 720px) {
-          .marks-wrapper { padding: 0 12px 60px; }
-          .styled-table { min-width: 560px; font-size: 13px; }
-          .small-input { width: 72px; }
-        }
-        @media (max-width: 480px) {
-          .styled-table { min-width: 480px; font-size: 13px; }
-          .marks-header { flex-direction: column; align-items: flex-start; gap: 12px; }
-        }
-      `}</style>
+        {showAllMarks && (
+          <div className="premium-card" style={styles.allMarksCard}>
+            <div style={styles.cardHeader}>
+              <h3 style={styles.tableTitle}>Global Examination Records</h3>
+              <button className="modern-btn btn-outline" onClick={() => setShowAllMarks(false)}>Dismiss</button>
+            </div>
+            {allMarks.length === 0 ? (
+              <div style={styles.empty}>No marks indexed in the global database.</div>
+            ) : (
+              <div style={styles.tableWrapper}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr>
+                      <th style={styles.th}>Ref</th>
+                      <th style={styles.th}>Student</th>
+                      <th style={styles.th}>Subject</th>
+                      <th style={styles.th}>Score</th>
+                      <th style={styles.th}>Date</th>
+                      <th style={styles.th}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {allMarks.map((m) => (
+                      <tr key={m.marksId} style={styles.tr}>
+                        <td style={styles.tdMuted}>#{m.marksId}</td>
+                        <td style={styles.tdStrong}>{m.studentName}</td>
+                        <td style={styles.td}>{m.subjectName}</td>
+                        <td style={styles.td}>{m.marksObtained} / {m.totalMarks}</td>
+                        <td style={styles.td}>{new Date(m.examDate).toLocaleDateString()}</td>
+                        <td style={styles.td}>
+                          <button style={styles.deleteBtn} onClick={() => handleDelete(m.marksId)}>
+                            <FaTrash size={12} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
+};
+
+const styles = {
+  container: {
+    maxWidth: "1000px",
+    margin: "0 auto",
+  },
+  header: {
+    marginBottom: "32px",
+  },
+  title: {
+    fontSize: "28px",
+    fontWeight: "700",
+    marginBottom: "4px",
+  },
+  subtitle: {
+    color: "var(--text-muted)",
+    fontSize: "14px",
+  },
+  actionHeader: {
+    marginBottom: "32px",
+    display: "flex",
+    justifyContent: "flex-end",
+  },
+  badgeGroup: {
+    display: "flex",
+    gap: "12px",
+  },
+  mainGrid: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "32px",
+  },
+  selectCard: {
+    padding: "32px",
+  },
+  sectionTitle: {
+    fontSize: "16px",
+    fontWeight: "700",
+    marginBottom: "24px",
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    color: "var(--text-primary)",
+    borderBottom: "1px solid var(--border-color)",
+    paddingBottom: "12px",
+  },
+  inputGroup: {
+    marginBottom: "20px",
+  },
+  label: {
+    display: "block",
+    fontSize: "12px",
+    fontWeight: "700",
+    textTransform: "uppercase",
+    color: "var(--text-muted)",
+    letterSpacing: "0.5px",
+    marginBottom: "8px",
+  },
+  examBadgeGrid: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "12px",
+    marginTop: "12px",
+  },
+  examInfoItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "8px 16px",
+    backgroundColor: "var(--background-color)",
+    borderRadius: "20px",
+    fontSize: "13px",
+    fontWeight: "600",
+    color: "var(--primary-color)",
+    border: "1px solid var(--border-color)",
+  },
+  infoIcon: {
+    fontSize: "14px",
+    opacity: 0.7,
+  },
+  tableCard: {
+    padding: "0",
+    overflow: "hidden",
+  },
+  cardHeader: {
+    padding: "24px",
+    backgroundColor: "rgba(0,0,0,0.01)",
+    borderBottom: "1px solid var(--border-color)",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  tableTitle: {
+    margin: 0,
+    fontSize: "18px",
+    fontWeight: "700",
+  },
+  headerButtons: {
+    display: "flex",
+    gap: "12px",
+  },
+  tableWrapper: {
+    overflowX: "auto",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+  },
+  th: {
+    textAlign: "left",
+    padding: "16px 24px",
+    fontSize: "13px",
+    fontWeight: "600",
+    color: "var(--text-muted)",
+    borderBottom: "1px solid var(--border-color)",
+    backgroundColor: "var(--background-color)",
+  },
+  tr: {
+    borderBottom: "1px solid var(--border-color)",
+    transition: "background-color 0.2s",
+  },
+  td: {
+    padding: "16px 24px",
+    fontSize: "14px",
+    verticalAlign: "middle",
+  },
+  tdNum: {
+    padding: "16px 24px",
+    fontSize: "13px",
+    color: "var(--text-muted)",
+    textAlign: "center",
+  },
+  studentCell: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+  },
+  avatarMini: {
+    width: "28px",
+    height: "28px",
+    borderRadius: "50%",
+    backgroundColor: "var(--border-color)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "12px",
+    fontWeight: "700",
+    color: "var(--text-secondary)",
+  },
+  studentNameText: {
+    fontWeight: "600",
+    color: "var(--text-primary)",
+  },
+  marksInput: {
+    width: "100px",
+    textAlign: "center",
+    backgroundColor: "white",
+  },
+  allMarksCard: {
+    padding: "0",
+  },
+  tdStrong: {
+    padding: "16px 24px",
+    fontWeight: "600",
+    color: "var(--primary-color)",
+  },
+  tdMuted: {
+    padding: "16px 24px",
+    fontSize: "12px",
+    color: "var(--text-muted)",
+  },
+  deleteBtn: {
+    width: "28px",
+    height: "28px",
+    borderRadius: "50%",
+    border: "none",
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    color: "var(--error-color)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    transition: "all 0.2s",
+  },
+  loading: {
+    padding: "40px",
+    textAlign: "center",
+    color: "var(--text-muted)",
+  },
+  empty: {
+    padding: "40px",
+    textAlign: "center",
+    color: "var(--text-muted)",
+  }
 };
 
 export default MarksEntryPage;

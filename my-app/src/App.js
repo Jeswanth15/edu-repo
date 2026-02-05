@@ -25,6 +25,7 @@ import MarksEntryPage from "./components/MarksEntryPage";
 import TeacherExam from "./components/TeacherExam";
 import TeacherDashboard from "./components/TeacherDashboard";
 import StudentTimetable from "./components/StudentTimetable";
+import ProfilePage from "./components/ProfilePage";
 import { getDecodedToken } from "./utils/authHelper";
 import StudentMarksPage from "./components/StudentMarksPage";
 import StudentAssignmentsPage from "./components/StudentAssignmentsPage";
@@ -351,6 +352,16 @@ function App() {
           element={
             <PrivateRoute roles={["SCHOOLADMIN"]}>
               <Layout><MarksEntryPage /></Layout>
+            </PrivateRoute>
+          }
+        />
+
+        {/* PROFILE */}
+        <Route
+          path="/profile"
+          element={
+            <PrivateRoute>
+              <Layout><ProfilePage /></Layout>
             </PrivateRoute>
           }
         />
