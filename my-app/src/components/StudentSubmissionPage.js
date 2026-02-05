@@ -133,7 +133,7 @@ const StudentSubmissionPage = () => {
 
               <p>
                 <strong>File:</strong>{" "}
-                <a href={submission.fileLink} target="_blank" rel="noreferrer">
+                <a href={`http://localhost:8080${submission.fileLink}`} target="_blank" rel="noreferrer">
                   View / Download
                 </a>
               </p>

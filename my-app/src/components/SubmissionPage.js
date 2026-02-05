@@ -63,10 +63,6 @@ const SubmissionPage = () => {
 
       await axios.post(`${API_BASE}/api/submissions`, formData, {
         ...config(),
-        headers: {
-          ...config().headers,
-          "Content-Type": "multipart/form-data",
-        },
       });
 
       alert("Uploaded successfully");
@@ -108,20 +104,20 @@ const SubmissionPage = () => {
         <div className="p-6">
           <h1 className="text-2xl font-bold mb-4">Submissions</h1>
 
-         
-            <div className="mb-6">
-              <h2 className="font-semibold mb-2">Upload Your Submission</h2>
 
-              <input type="file" onChange={(e) => setFile(e.target.files[0])} />
+          <div className="mb-6">
+            <h2 className="font-semibold mb-2">Upload Your Submission</h2>
 
-              <button
-                onClick={handleUpload}
-                className="ml-3 bg-blue-600 text-white px-4 py-2 rounded"
-                disabled={loading}
-              >
-                {loading ? "Uploading..." : "Upload"}
-              </button>
-            </div>
+            <input type="file" onChange={(e) => setFile(e.target.files[0])} />
+
+            <button
+              onClick={handleUpload}
+              className="ml-3 bg-blue-600 text-white px-4 py-2 rounded"
+              disabled={loading}
+            >
+              {loading ? "Uploading..." : "Upload"}
+            </button>
+          </div>
 
           <table className="w-full border">
             <thead className="bg-gray-200">

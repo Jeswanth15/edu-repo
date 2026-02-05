@@ -11,7 +11,6 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,7 +26,6 @@ import edu.example.edu.Service.SubmissionService;
 
 @RestController
 @RequestMapping("/api/submissions")
-@CrossOrigin(origins = "*") // ✅ Allow frontend requests from any origin
 public class SubmissionController {
 
     private final SubmissionService submissionService;
@@ -45,8 +43,9 @@ public class SubmissionController {
             @RequestParam("assignmentId") Long assignmentId,
             @RequestParam("studentId") Long studentId) throws IOException {
 
-        System.out.println("Uploading file: " + file.getOriginalFilename());
-        System.out.println("AssignmentId: " + assignmentId + ", StudentId: " + studentId);
+        System.out.println(">>> SUBMISSION CONTROLLER: Received upload request");
+        System.out.println(">>> AssignmentId: " + assignmentId + ", StudentId: " + studentId);
+        System.out.println(">>> File: " + (file != null ? file.getOriginalFilename() : "No file"));
 
         String projectRoot = System.getProperty("user.dir");
         String uploadDir = projectRoot + File.separator + "uploads" + File.separator + "submissions" + File.separator;

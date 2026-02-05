@@ -62,7 +62,14 @@ public class JwtFilter extends OncePerRequestFilter {
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authToken);
 
+                // 🔹 DEBUG: log authorities
+                System.out.println(">>> JWT FILTER: Authentication successful for: " + email);
+                System.out.println(">>> JWT FILTER: Authorities set: " + authorities);
+            } else {
+                System.out.println(">>> JWT FILTER: Token validation FAILED for: " + email);
             }
+        } else if (email != null) {
+            System.out.println(">>> JWT FILTER: User already authenticated or context not null for: " + email);
         }
 
         chain.doFilter(request, response);
