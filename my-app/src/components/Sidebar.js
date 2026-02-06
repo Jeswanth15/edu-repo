@@ -107,6 +107,7 @@ const Sidebar = () => {
 
               <h2 style={styles.sectionTitle}>{t("academics")}</h2>
               <Link to="/schooladmin/timetables" style={linkStyle("/schooladmin/timetables")} onClick={closeSidebar}>{t("master_timetable")}</Link>
+              <Link to="/schooladmin/substitutions" style={linkStyle("/schooladmin/substitutions")} onClick={closeSidebar}>Daily Substitutions</Link>
               <Link to="/schooladmin/calendar" style={linkStyle("/schooladmin/calendar")} onClick={closeSidebar}>{t("school_calendar")}</Link>
               <Link to="/schooladmin/syllabus" style={linkStyle("/schooladmin/syllabus")} onClick={closeSidebar}>{t("syllabus_hub")}</Link>
               <Link to="/schooladmin/exams" style={linkStyle("/schooladmin/exams")} onClick={closeSidebar}>{t("exam_schedules")}</Link>

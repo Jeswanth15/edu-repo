@@ -19,6 +19,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findBySchool_SchoolIdAndApprovalStatus(Long schoolId, ApprovalStatus approvalStatus);
 
     List<User> findByApprovalStatus(ApprovalStatus approvalStatus);
+
     List<User> findBySchool_SchoolIdAndRole(Long schoolId, User.Role role);
 
+    List<User> findByRole(User.Role role);
 }

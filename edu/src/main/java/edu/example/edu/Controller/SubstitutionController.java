@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import edu.example.edu.DTO.SubstitutionDTO;
@@ -52,6 +53,16 @@ public class SubstitutionController {
     @PreAuthorize("hasAnyAuthority('TEACHER','SCHOOLADMIN','PRINCIPAL')")
     public List<SubstitutionDTO> getBySubstituteTeacher(@PathVariable Long teacherId) {
         return substitutionService.getBySubstituteTeacher(teacherId);
+    }
+
+    // 🔍 Find Free Teachers
+    @GetMapping("/free-teachers")
+    @PreAuthorize("hasAnyAuthority('SCHOOLADMIN','PRINCIPAL')")
+    public List<edu.example.edu.Entity.User> getFreeTeachers(
+            @RequestParam String date,
+            @RequestParam int periodNumber) {
+        java.time.LocalDate parsedDate = java.time.LocalDate.parse(date);
+        return substitutionService.findFreeTeachers(parsedDate, periodNumber);
     }
 
     // Delete

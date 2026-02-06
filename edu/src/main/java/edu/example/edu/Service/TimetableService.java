@@ -78,11 +78,14 @@ public class TimetableService {
             boolean exists = timetableRepository.existsByTeacherAndDayOfWeekAndPeriodNumber(
                     teacher,
                     dayEnum,
-                    dto.getPeriodNumber()
-            );
+                    dto.getPeriodNumber());
 
             if (exists) {
-                throw new RuntimeException("Teacher is already teaching another class at this time");
+                Timetable conflict = timetableRepository.findFirstByTeacherAndDayOfWeekAndPeriodNumber(
+                        teacher, dayEnum, dto.getPeriodNumber()).orElse(null);
+
+                String className = (conflict != null) ? conflict.getClassroom().getName() : "another class";
+                throw new RuntimeException("Teacher is already alloted to class " + className + " at this time");
             }
         }
 
@@ -147,11 +150,14 @@ public class TimetableService {
                             teacher,
                             newDay,
                             newPeriod,
-                            t.getTimetableId()
-                    );
+                            t.getTimetableId());
 
             if (exists) {
-                throw new RuntimeException("Teacher is already teaching another class at this time");
+                Timetable conflict = timetableRepository.findFirstByTeacherAndDayOfWeekAndPeriodNumberAndTimetableIdNot(
+                        teacher, newDay, newPeriod, t.getTimetableId()).orElse(null);
+
+                String className = (conflict != null) ? conflict.getClassroom().getName() : "another class";
+                throw new RuntimeException("Teacher is already alloted to class " + className + " at this time");
             }
 
             t.setTeacher(teacher);

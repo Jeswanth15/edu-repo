@@ -31,6 +31,7 @@ import StudentMarksPage from "./components/StudentMarksPage";
 import StudentAssignmentsPage from "./components/StudentAssignmentsPage";
 import StudentSubmissionPage from "./components/StudentSubmissionPage";
 import AttendanceStudent from "./components/AttendanceStudent";
+import Substitution from "./components/Substitution";
 
 import Layout from "./components/Layout";
 
@@ -352,6 +353,15 @@ function App() {
           element={
             <PrivateRoute roles={["SCHOOLADMIN"]}>
               <Layout><MarksEntryPage /></Layout>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/schooladmin/substitutions"
+          element={
+            <PrivateRoute roles={["SCHOOLADMIN"]}>
+              <Layout><Substitution /></Layout>
             </PrivateRoute>
           }
         />

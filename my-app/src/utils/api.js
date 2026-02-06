@@ -271,3 +271,22 @@ export const getExamsForStudent = (classroomId) =>
 
 export const getAllSchools = () =>
   axios.get(`${API_BASE}/api/schools`);
+
+// ---------------- SUBSTITUTIONS ----------------
+export const getAllSubstitutions = () =>
+  axios.get(`${API_BASE}/api/substitutions`, config());
+
+export const createSubstitution = (data) =>
+  axios.post(`${API_BASE}/api/substitutions`, data, config());
+
+export const getSubstitutionsByDate = (date) =>
+  axios.get(`${API_BASE}/api/substitutions/date/${date}`, config());
+
+export const getFreeTeachers = (date, periodNumber) =>
+  axios.get(
+    `${API_BASE}/api/substitutions/free-teachers?date=${date}&periodNumber=${periodNumber}`,
+    config()
+  );
+
+export const deleteSubstitution = (id) =>
+  axios.delete(`${API_BASE}/api/substitutions/${id}`, config());

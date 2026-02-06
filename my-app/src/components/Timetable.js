@@ -49,69 +49,69 @@ const Timetable = () => {
   }, [schoolId]);
 
   useEffect(() => {
-  if (!selectedClass) return;
+    if (!selectedClass) return;
 
-  const load = async () => {
+    const load = async () => {
 
-    const classTimetables = timetables
-      .filter(t => t.classroomId === selectedClass.classId)
-      .map(t => ({
-        ...t,
-        dayOfWeek: t.dayOfWeek.substring(0, 3).toUpperCase(),
-        periodNumber: Number(t.periodNumber)
-      }));
+      const classTimetables = timetables
+        .filter(t => t.classroomId === selectedClass.classId)
+        .map(t => ({
+          ...t,
+          dayOfWeek: t.dayOfWeek.substring(0, 3).toUpperCase(),
+          periodNumber: Number(t.periodNumber)
+        }));
 
-    const g = {};
+      const g = {};
 
-    daysOfWeek.forEach(d => {
-      g[d] = {};
-      periods.forEach(p => {
-        const entry = classTimetables.find(
-          t => t.dayOfWeek === d && t.periodNumber === p
-        );
+      daysOfWeek.forEach(d => {
+        g[d] = {};
+        periods.forEach(p => {
+          const entry = classTimetables.find(
+            t => t.dayOfWeek === d && t.periodNumber === p
+          );
 
-        g[d][p] = {
-          subjectId: entry?.subjectId || "",
-          teacherId: entry?.teacherId || "",
-          timetableId: entry?.timetableId || null,
-          availableSubjects: [],
-          availableTeachers: [],
-        };
+          g[d][p] = {
+            subjectId: entry?.subjectId || "",
+            teacherId: entry?.teacherId || "",
+            timetableId: entry?.timetableId || null,
+            availableSubjects: [],
+            availableTeachers: [],
+          };
+        });
       });
-    });
 
-    // subjects of this class
-    const subs = classSubjects
-      .filter(cs => cs.classroomId === selectedClass.classId)
-      .map(cs => ({ subjectId: cs.subjectId, name: cs.subjectName }));
+      // subjects of this class
+      const subs = classSubjects
+        .filter(cs => cs.classroomId === selectedClass.classId)
+        .map(cs => ({ subjectId: cs.subjectId, name: cs.subjectName }));
 
-    // assign subjects
-    daysOfWeek.forEach(d => {
-      periods.forEach(p => {
-        g[d][p].availableSubjects = subs;
+      // assign subjects
+      daysOfWeek.forEach(d => {
+        periods.forEach(p => {
+          g[d][p].availableSubjects = subs;
+        });
       });
-    });
 
-    // IMPORTANT PART
-    for (const d of daysOfWeek) {
-      for (const p of periods) {
-        const c = g[d][p];
+      // IMPORTANT PART
+      for (const d of daysOfWeek) {
+        for (const p of periods) {
+          const c = g[d][p];
 
-        if (!c.subjectId) continue;
+          if (!c.subjectId) continue;
 
-        try {
-          const res = await getEnrolledTeachers(selectedClass.classId, Number(c.subjectId));
-          c.availableTeachers = res.data || [];
-        } catch {}
+          try {
+            const res = await getEnrolledTeachers(selectedClass.classId, Number(c.subjectId));
+            c.availableTeachers = res.data || [];
+          } catch { }
+        }
       }
-    }
 
-    setGridData(g);
-  };
+      setGridData(g);
+    };
 
-  load();
+    load();
 
-}, [selectedClass, timetables, classSubjects]);
+  }, [selectedClass, timetables, classSubjects]);
 
 
   const handleChangeCell = async (day, period, field, value) => {
@@ -187,7 +187,8 @@ const Timetable = () => {
       alert("Timetable saved successfully!");
     } catch (err) {
       console.error(err);
-      alert("Error saving timetable");
+      const msg = err.response?.data?.message || "Error saving timetable";
+      alert(msg);
     }
   };
 
