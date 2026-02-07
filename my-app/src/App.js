@@ -148,6 +148,15 @@ function App() {
           }
         />
 
+        <Route
+          path="/teacher/assignments/:assignmentId/submissions"
+          element={
+            <PrivateRoute roles={["TEACHER", "SCHOOLADMIN"]}>
+              <Layout><SubmissionPage /></Layout>
+            </PrivateRoute>
+          }
+        />
+
         {/* ---------------- STUDENT ---------------- */}
         <Route
           path="/student"

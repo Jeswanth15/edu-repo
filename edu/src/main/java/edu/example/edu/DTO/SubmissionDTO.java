@@ -12,4 +12,5 @@ public class SubmissionDTO {
     private String fileLink;
     private String grade;
     private String feedback;
+    private String studentName;
 }

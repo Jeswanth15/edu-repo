@@ -2,75 +2,42 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
-  getSubmissionsByAssignment,
-  getStudentSubmissions,
-  createSubmission,
+  getAssignmentCompliance,
   updateGradeAndFeedback
 } from "../utils/api";
 import { getDecodedToken } from "../utils/authHelper";
 import {
-  FaUpload, FaFileAlt, FaCheckCircle, FaUser, FaCalendarAlt,
-  FaGraduationCap, FaSave, FaExclamationCircle, FaDownload
+  FaCheckCircle, FaUser, FaCalendarAlt,
+  FaGraduationCap, FaSave, FaExclamationCircle, FaDownload,
+  FaClock, FaUsers
 } from "react-icons/fa";
 
 const SubmissionPage = () => {
   const { assignmentId } = useParams();
   const decoded = getDecodedToken();
   const role = decoded?.role;
-  const userId = decoded?.userId;
 
-  const [submissions, setSubmissions] = useState([]);
-  const [file, setFile] = useState(null);
+  const [complianceData, setComplianceData] = useState(null);
   const [gradeMap, setGradeMap] = useState({});
   const [feedbackMap, setFeedbackMap] = useState({});
-  const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("submitted"); // "submitted" or "pending"
 
-  const loadSubmissions = async () => {
+  const loadCompliance = async () => {
     try {
       setPageLoading(true);
-      let res;
-      if (role === "STUDENT") {
-        res = await getStudentSubmissions(assignmentId, userId);
-      } else {
-        res = await getSubmissionsByAssignment(assignmentId);
-      }
-      setSubmissions(res.data || []);
+      const res = await getAssignmentCompliance(assignmentId);
+      setComplianceData(res.data);
     } catch (err) {
-      console.error("Error loading submissions:", err);
+      console.error("Error loading compliance data:", err);
     } finally {
       setPageLoading(false);
     }
   };
 
   useEffect(() => {
-    if (assignmentId) loadSubmissions();
+    if (assignmentId) loadCompliance();
   }, [assignmentId]);
-
-  const handleUpload = async (e) => {
-    e.preventDefault();
-    if (!file) return alert("Please select a file first");
-    setLoading(true);
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("assignmentId", assignmentId);
-      formData.append("studentId", userId);
-
-      await createSubmission(formData);
-      alert("Submission uploaded successfully!");
-      setFile(null);
-      const fileInput = document.getElementById("submission-file-input");
-      if (fileInput) fileInput.value = "";
-      loadSubmissions();
-    } catch (err) {
-      console.error(err);
-      alert("Upload failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleUpdateGrade = async (submissionId) => {
     const grade = gradeMap[submissionId];
@@ -81,7 +48,7 @@ const SubmissionPage = () => {
     try {
       await updateGradeAndFeedback(submissionId, grade, feedback || "");
       alert("Grade updated successfully");
-      loadSubmissions();
+      loadCompliance();
     } catch (err) {
       console.error(err);
       alert("Failed to update grade");
@@ -94,90 +61,71 @@ const SubmissionPage = () => {
     return `http://localhost:8080${url}`;
   };
 
-  if (pageLoading) return <div style={styles.loading}>Loading submissions...</div>;
+  if (pageLoading) return <div style={styles.loading}>Generating compliance report...</div>;
+  if (!complianceData) return <div style={styles.emptyState}>No data found.</div>;
+
+  const submittedStudents = complianceData.statuses.filter(s => s.submitted);
+  const pendingStudents = complianceData.statuses.filter(s => !s.submitted);
 
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h1 style={styles.title}>Submissions</h1>
-        <p style={styles.subtitle}>Track and manage student work for this assignment</p>
+        <div style={styles.headerTop}>
+          <h1 style={styles.title}>{complianceData.assignmentTitle}</h1>
+          <div style={styles.statsBadge}>
+            <FaUsers /> {complianceData.totalStudents} Total Students
+          </div>
+        </div>
+        <p style={styles.subtitle}>Track submissions and grade student work</p>
       </div>
 
-      {/* STUDENT UPLOAD SECTION */}
-      {role === "STUDENT" && (
-        <div className="premium-card" style={styles.uploadCard}>
-          <h3 style={styles.sectionTitle}><FaUpload size={14} /> Submit Your Work</h3>
-          <form onSubmit={handleUpload} style={styles.uploadForm}>
-            <div style={styles.fileBox}>
-              <input
-                type="file"
-                id="submission-file-input"
-                style={{ display: "none" }}
-                onChange={(e) => setFile(e.target.files[0])}
-              />
-              <label htmlFor="submission-file-input" style={styles.fileLabel}>
-                <FaFileAlt size={24} style={{ marginBottom: "8px", opacity: 0.5 }} />
-                <span>{file ? file.name : "Click to select or drag your file here"}</span>
-              </label>
-            </div>
-            <button
-              type="submit"
-              className="modern-btn btn-primary"
-              disabled={loading || !file}
-              style={{ width: "200px", alignSelf: "center" }}
-            >
-              {loading ? "Uploading..." : "Submit Assignment"}
-            </button>
-          </form>
-        </div>
-      )}
+      <div style={styles.tabContainer}>
+        <button
+          style={{ ...styles.tab, ...(activeTab === "submitted" ? styles.activeTab : {}) }}
+          onClick={() => setActiveTab("submitted")}
+        >
+          Submitted ({submittedStudents.length})
+        </button>
+        <button
+          style={{ ...styles.tab, ...(activeTab === "pending" ? styles.activeTab : {}) }}
+          onClick={() => setActiveTab("pending")}
+        >
+          Pending ({pendingStudents.length})
+        </button>
+      </div>
 
-      {/* SUBMISSIONS LIST */}
       <div style={styles.listSection}>
-        <h3 style={styles.listHeader}>
-          <FaCheckCircle /> {submissions.length} Submissions
-        </h3>
-
-        {submissions.length === 0 ? (
-          <div className="premium-card" style={styles.emptyState}>
-            <FaExclamationCircle size={32} style={{ opacity: 0.2, marginBottom: "12px" }} />
-            <p>No submissions found yet.</p>
-          </div>
-        ) : (
-          <div style={styles.submissionsGrid}>
-            {submissions.map((s) => (
-              <div key={s.submissionId} className="premium-card" style={styles.subCard}>
-                <div style={styles.subTop}>
-                  <div style={styles.studentInfo}>
-                    <div style={styles.avatar}><FaUser /></div>
-                    <div>
-                      <div style={styles.studentName}>Student ID: {s.studentId}</div>
-                      <div style={styles.subDate}><FaCalendarAlt size={10} /> Submitted on: {new Date(s.submissionDate).toLocaleDateString()}</div>
+        {activeTab === "submitted" ? (
+          submittedStudents.length === 0 ? (
+            <div className="premium-card" style={styles.emptyState}>
+              <FaExclamationCircle size={32} style={{ opacity: 0.2, marginBottom: "12px" }} />
+              <p>No submissions found yet.</p>
+            </div>
+          ) : (
+            <div style={styles.submissionsGrid}>
+              {submittedStudents.map((s) => (
+                <div key={s.studentId} className="premium-card" style={styles.subCard}>
+                  <div style={styles.subTop}>
+                    <div style={styles.studentInfo}>
+                      <div style={styles.avatar}><FaUser /></div>
+                      <div>
+                        <div style={styles.studentName}>{s.studentName}</div>
+                        <div style={styles.subDate}>
+                          <FaCalendarAlt size={10} /> Submitted on: {new Date(s.submission.submissionDate).toLocaleDateString()}
+                        </div>
+                      </div>
                     </div>
+                    <a
+                      href={getFullFileUrl(s.submission.fileLink)}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={styles.downloadBtn}
+                    >
+                      <FaDownload /> View Work
+                    </a>
                   </div>
-                  <a
-                    href={getFullFileUrl(s.fileLink)}
-                    target="_blank"
-                    rel="noreferrer"
-                    style={styles.downloadBtn}
-                  >
-                    <FaDownload /> View Work
-                  </a>
-                </div>
 
-                <div style={styles.subBottom}>
-                  {role === "STUDENT" ? (
-                    <div style={styles.resultBox}>
-                      <div style={styles.gradeDisplay}>
-                        <span style={styles.label}>Grade:</span>
-                        <span style={styles.gradeValue}>{s.grade || "Pending"}</span>
-                      </div>
-                      <div style={styles.feedbackDisplay}>
-                        <span style={styles.label}>Feedback:</span>
-                        <p style={styles.feedbackText}>{s.feedback || "No feedback provided yet."}</p>
-                      </div>
-                    </div>
-                  ) : (
+                  <div style={styles.subBottom}>
                     <div style={styles.gradingForm}>
                       <div style={styles.formRow}>
                         <div style={{ flex: 1 }}>
@@ -185,8 +133,8 @@ const SubmissionPage = () => {
                           <input
                             type="text"
                             className="modern-input"
-                            placeholder={s.grade || "Enter grade..."}
-                            onChange={(e) => setGradeMap({ ...gradeMap, [s.submissionId]: e.target.value })}
+                            placeholder={s.submission.grade || "Enter grade..."}
+                            onChange={(e) => setGradeMap({ ...gradeMap, [s.submission.submissionId]: e.target.value })}
                           />
                         </div>
                         <div style={{ flex: 3 }}>
@@ -194,24 +142,45 @@ const SubmissionPage = () => {
                           <input
                             type="text"
                             className="modern-input"
-                            placeholder={s.feedback || "Add feedback..."}
-                            onChange={(e) => setFeedbackMap({ ...feedbackMap, [s.submissionId]: e.target.value })}
+                            placeholder={s.submission.feedback || "Add feedback..."}
+                            onChange={(e) => setFeedbackMap({ ...feedbackMap, [s.submission.submissionId]: e.target.value })}
                           />
                         </div>
                         <button
                           className="modern-btn btn-primary"
                           style={styles.saveBtn}
-                          onClick={() => handleUpdateGrade(s.submissionId)}
+                          onClick={() => handleUpdateGrade(s.submission.submissionId)}
                         >
                           <FaSave /> Save
                         </button>
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )
+        ) : (
+          pendingStudents.length === 0 ? (
+            <div className="premium-card" style={styles.emptyState}>
+              <FaCheckCircle size={32} style={{ color: "#10b981", opacity: 0.4, marginBottom: "12px" }} />
+              <p>All students have submitted their work!</p>
+            </div>
+          ) : (
+            <div style={styles.pendingGrid}>
+              {pendingStudents.map((s) => (
+                <div key={s.studentId} className="premium-card" style={styles.pendingCard}>
+                  <div style={styles.pendingInfo}>
+                    <div style={styles.pendingAvatar}><FaUser /></div>
+                    <div>
+                      <div style={styles.studentName}>{s.studentName}</div>
+                      <div style={styles.subStatus}><FaClock size={10} /> Not Submitted</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
         )}
       </div>
     </div>
@@ -226,6 +195,11 @@ const styles = {
   header: {
     marginBottom: "32px",
   },
+  headerTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   title: {
     fontSize: "28px",
     fontWeight: "700",
@@ -235,53 +209,42 @@ const styles = {
     color: "var(--text-muted)",
     fontSize: "14px",
   },
-  uploadCard: {
-    padding: "24px",
-    marginBottom: "32px",
-  },
-  sectionTitle: {
-    fontSize: "18px",
+  statsBadge: {
+    backgroundColor: "rgba(37, 99, 235, 0.1)",
+    color: "var(--primary-color)",
+    padding: "8px 16px",
+    borderRadius: "20px",
+    fontSize: "13px",
     fontWeight: "700",
-    marginBottom: "20px",
     display: "flex",
     alignItems: "center",
-    gap: "10px",
+    gap: "8px",
+  },
+  tabContainer: {
+    display: "flex",
+    gap: "8px",
+    marginBottom: "24px",
     borderBottom: "1px solid var(--border-color)",
-    paddingBottom: "12px",
+    paddingBottom: "16px",
   },
-  uploadForm: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "20px",
-  },
-  fileBox: {
-    border: "2px dashed var(--border-color)",
-    borderRadius: "var(--radius-md)",
-    padding: "32px",
-    textAlign: "center",
-    backgroundColor: "rgba(0,0,0,0.02)",
-    transition: "all 0.2s",
-    cursor: "pointer",
-  },
-  fileLabel: {
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    color: "var(--text-muted)",
+  tab: {
+    padding: "10px 24px",
+    borderRadius: "8px",
+    border: "1px solid var(--border-color)",
+    background: "white",
     fontSize: "14px",
+    fontWeight: "600",
     cursor: "pointer",
+    transition: "all 0.2s",
+    color: "var(--text-muted)",
+  },
+  activeTab: {
+    backgroundColor: "var(--primary-color)",
+    color: "white",
+    borderColor: "var(--primary-color)",
   },
   listSection: {
-    marginTop: "40px",
-  },
-  listHeader: {
-    fontSize: "18px",
-    fontWeight: "700",
-    marginBottom: "20px",
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    color: "var(--primary-color)",
+    marginTop: "0",
   },
   submissionsGrid: {
     display: "flex",
@@ -344,39 +307,6 @@ const styles = {
   subBottom: {
     padding: "20px 24px",
   },
-  resultBox: {
-    display: "grid",
-    gridTemplateColumns: "1fr 2fr",
-    gap: "24px",
-  },
-  gradeDisplay: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-  },
-  label: {
-    fontSize: "12px",
-    fontWeight: "700",
-    color: "var(--text-muted)",
-    textTransform: "uppercase",
-  },
-  gradeValue: {
-    fontSize: "24px",
-    fontWeight: "800",
-    color: "var(--primary-color)",
-  },
-  feedbackDisplay: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "4px",
-  },
-  feedbackText: {
-    fontSize: "14px",
-    color: "var(--text-primary)",
-    lineHeight: "1.6",
-    margin: 0,
-    fontStyle: "italic",
-  },
   gradingForm: {
     width: "100%",
   },
@@ -395,6 +325,39 @@ const styles = {
   saveBtn: {
     padding: "10px 24px",
     height: "42px",
+  },
+  pendingGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+    gap: "16px",
+  },
+  pendingCard: {
+    padding: "16px",
+  },
+  pendingInfo: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+  },
+  pendingAvatar: {
+    width: "32px",
+    height: "32px",
+    borderRadius: "50%",
+    backgroundColor: "var(--border-color)",
+    color: "var(--text-muted)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "14px",
+  },
+  subStatus: {
+    fontSize: "11px",
+    color: "#f59e0b",
+    fontWeight: "700",
+    display: "flex",
+    alignItems: "center",
+    gap: "4px",
+    marginTop: "2px",
   },
   emptyState: {
     textAlign: "center",

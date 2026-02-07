@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import edu.example.edu.DTO.SubmissionDTO;
+import edu.example.edu.DTO.SubmissionComplianceDTO;
 import edu.example.edu.Service.SubmissionService;
 
 @RestController
@@ -146,6 +147,12 @@ public class SubmissionController {
             @RequestParam String feedback) {
 
         return submissionService.updateGradeAndFeedback(submissionId, grade, feedback);
+    }
+
+    @GetMapping("/assignment/{assignmentId}/compliance")
+    @PreAuthorize("hasAnyAuthority('TEACHER','SCHOOLADMIN','PRINCIPAL')")
+    public SubmissionComplianceDTO getSubmissionCompliance(@PathVariable Long assignmentId) {
+        return submissionService.getSubmissionCompliance(assignmentId);
     }
 
 }

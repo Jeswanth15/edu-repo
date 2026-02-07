@@ -188,6 +188,9 @@ export const getAssignmentsBySubject = (subjectId) =>
 export const getSubmissionsByAssignment = (assignmentId) =>
   axios.get(`${API_BASE}/api/submissions/assignment/${assignmentId}`, config());
 
+export const getAssignmentCompliance = (assignmentId) =>
+  axios.get(`${API_BASE}/api/submissions/assignment/${assignmentId}/compliance`, config());
+
 export const getSubmissionsByStudent = (studentId) =>
   axios.get(`${API_BASE}/api/submissions/student/${studentId}`, config());
 

@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import edu.example.edu.DTO.SubmissionDTO;
+import edu.example.edu.DTO.SubmissionComplianceDTO;
+import edu.example.edu.DTO.StudentSubmissionStatusDTO;
 import edu.example.edu.Entity.Assignment;
 import edu.example.edu.Entity.Submission;
 import edu.example.edu.Entity.User;
@@ -35,6 +37,7 @@ public class SubmissionService {
         dto.setFileLink(submission.getFileLink());
         dto.setGrade(submission.getGrade());
         dto.setFeedback(submission.getFeedback());
+        dto.setStudentName(submission.getStudent() != null ? submission.getStudent().getName() : "Unknown");
         return dto;
     }
 
@@ -88,6 +91,7 @@ public class SubmissionService {
         Submission saved = submissionRepository.save(submission);
         return toDTO(saved);
     }
+
     public List<SubmissionDTO> getSubmissionsByAssignmentAndStudent(Long assignmentId, Long studentId) {
         return submissionRepository
                 .findByAssignment_AssignmentIdAndStudent_UserId(assignmentId, studentId)
@@ -95,6 +99,7 @@ public class SubmissionService {
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
+
     public SubmissionDTO updateGradeAndFeedback(Long submissionId, String grade, String feedback) {
         Submission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new RuntimeException("Submission not found"));
@@ -104,4 +109,39 @@ public class SubmissionService {
         return toDTO(saved);
     }
 
+    public SubmissionComplianceDTO getSubmissionCompliance(Long assignmentId) {
+        Assignment assignment = assignmentRepository.findById(assignmentId)
+                .orElseThrow(() -> new RuntimeException("Assignment not found"));
+
+        List<User> classroomStudents = userRepository.findByClassroom_ClassId(assignment.getClassroom().getClassId());
+        List<Submission> submissions = submissionRepository.findByAssignment_AssignmentId(assignmentId);
+
+        SubmissionComplianceDTO compliance = new SubmissionComplianceDTO();
+        compliance.setAssignmentId(assignmentId);
+        compliance.setAssignmentTitle(assignment.getTitle());
+        compliance.setTotalStudents(classroomStudents.size());
+
+        List<StudentSubmissionStatusDTO> statuses = classroomStudents.stream().map(student -> {
+            StudentSubmissionStatusDTO status = new StudentSubmissionStatusDTO();
+            status.setStudentId(student.getUserId());
+            status.setStudentName(student.getName());
+
+            Submission studentSub = submissions.stream()
+                    .filter(s -> s.getStudent().getUserId().equals(student.getUserId()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (studentSub != null) {
+                status.setSubmitted(true);
+                status.setSubmission(toDTO(studentSub));
+            } else {
+                status.setSubmitted(false);
+                status.setSubmission(null);
+            }
+            return status;
+        }).collect(Collectors.toList());
+
+        compliance.setStatuses(statuses);
+        return compliance;
+    }
 }

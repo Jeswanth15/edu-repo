@@ -8,7 +8,7 @@ import {
 import { getDecodedToken } from "../utils/authHelper";
 import {
   FaUpload, FaFileAlt, FaCheckCircle, FaCalendarAlt,
-  FaExclamationCircle, FaDownload, FaHistory
+  FaExclamationCircle, FaDownload, FaHistory, FaUser
 } from "react-icons/fa";
 
 const StudentSubmissionPage = () => {
@@ -26,7 +26,7 @@ const StudentSubmissionPage = () => {
     const loadSubmission = async () => {
       try {
         setLoading(true);
-        const res = await getStudentSubmissions(assignmentId);
+        const res = await getStudentSubmissions(assignmentId, studentId);
         setSubmission(res.data.length > 0 ? res.data[0] : null);
       } catch (err) {
         console.error("Load submission error", err);
@@ -96,6 +96,13 @@ const StudentSubmissionPage = () => {
 
             <div className="premium-card" style={styles.fileCard}>
               <h3 style={styles.sectionTitle}><FaHistory /> Submission Details</h3>
+              <div style={styles.detailRow}>
+                <FaUser style={styles.icon} />
+                <div>
+                  <label style={styles.label}>Submitted By</label>
+                  <p style={styles.value}>{submission.studentName || "You"}</p>
+                </div>
+              </div>
               <div style={styles.detailRow}>
                 <FaCalendarAlt style={styles.icon} />
                 <div>
@@ -168,7 +175,7 @@ const StudentSubmissionPage = () => {
           )}
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 

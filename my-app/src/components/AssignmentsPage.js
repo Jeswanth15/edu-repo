@@ -6,13 +6,15 @@ import {
   createAssignment,
   getAssignmentsBySubject,
 } from "../utils/api";
-import { getDecodedToken } from "../utils/authHelper";
 import {
   FaPlus, FaBook, FaCalendarAlt, FaFileAlt, FaFilter,
   FaChevronRight, FaPaperclip, FaClock
 } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
+import { getDecodedToken } from "../utils/authHelper";
 
 const AssignmentsPage = () => {
+  const navigate = useNavigate();
   const decoded = getDecodedToken();
   const userId = decoded?.userId;
   const schoolId = decoded?.schoolId;
@@ -49,6 +51,10 @@ const AssignmentsPage = () => {
 
         if (role === "TEACHER") {
           setFilteredClassSubjects(allSubjects.filter((cs) => cs.teacherId === userId));
+        } else if (role === "STUDENT") {
+          const studentClassId = decoded?.classroomId;
+          setFilteredClassSubjects(allSubjects.filter((cs) => cs.classroomId === studentClassId));
+          setSelectedClass(studentClassId);
         } else {
           setFilteredClassSubjects(allSubjects);
         }
@@ -125,6 +131,7 @@ const AssignmentsPage = () => {
               <select
                 className="modern-input"
                 value={selectedClass}
+                disabled={role === "STUDENT"}
                 onChange={(e) => {
                   setSelectedClass(e.target.value);
                   setSelectedSubject("");
@@ -254,7 +261,15 @@ const AssignmentsPage = () => {
                             </a>
                           )}
                         </div>
-                        <button style={styles.actionBtn}>
+                        <button
+                          style={styles.actionBtn}
+                          onClick={() => {
+                            const path = role === "SCHOOLADMIN"
+                              ? `/schooladmin/assignments/${a.assignmentId}/submissions`
+                              : `/teacher/assignments/${a.assignmentId}/submissions`;
+                            navigate(path);
+                          }}
+                        >
                           View Details <FaChevronRight size={10} />
                         </button>
                       </div>
